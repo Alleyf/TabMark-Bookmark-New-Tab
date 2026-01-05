@@ -1861,7 +1861,10 @@ function createBookmarkCard(bookmark, index) {
 
   const img = document.createElement('img');
   img.className = 'w-6 h-6 mr-2';
-  img.src = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
+  // 使用跨浏览器favicon方案
+  img.src = isFirefox 
+    ? `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`
+    : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
 
   // 尝试从缓存获取颜色
   const cachedColors = localStorage.getItem(`bookmark-colors-${bookmark.id}`);
@@ -3877,7 +3880,9 @@ document.addEventListener('DOMContentLoaded', function () {
     localStorage.removeItem(`bookmark-colors-${bookmarkCard.dataset.id}`);
     
     // 更新 favicon URL
-    img.src = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(newUrl)}&size=32&t=${Date.now()}`;
+    img.src = isFirefox
+      ? `https://www.google.com/s2/favicons?domain=${new URL(newUrl).hostname}&sz=32&t=${Date.now()}`
+      : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(newUrl)}&size=32&t=${Date.now()}`;
     
     img.onload = function () {
       const colors = getColors(img);
@@ -3949,7 +3954,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     api.bookmarks.search({ url: url }, function (results) {
       if (results && results.length > 0) {
-        const faviconURL = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
+        const faviconURL = isFirefox
+          ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+          : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
         const img = new Image();
         img.onload = function () {
           callback(faviconURL);
@@ -5738,15 +5745,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Add this function to fetch favicons
   function getFavicon(url, callback) {
-    const faviconURL = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
-    const img = new Image();
-    img.onload = function () {
-      callback(faviconURL);
-    };
-    img.onerror = function () {
-      callback(''); // Return an empty string if favicon is not found
-    };
-    img.src = faviconURL;
+    try {
+      const domain = new URL(url).hostname;
+      const faviconURL = isFirefox
+        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+        : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
+      const img = new Image();
+      img.onload = function () {
+        callback(faviconURL);
+      };
+      img.onerror = function () {
+        callback(''); // Return an empty string if favicon is not found
+      };
+      img.src = faviconURL;
+    } catch (e) {
+      callback('');
+    }
   }
 
   // Add this function to fetch favicon online as a fallback

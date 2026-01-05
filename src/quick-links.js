@@ -34,11 +34,16 @@ document.addEventListener('DOMContentLoaded', function () {
   let quickLinkToDelete = null;
 
   function faviconURL(u) {
-    const url = new URL(api.runtime.getURL("/_favicon/"));
-    url.searchParams.set("pageUrl", u);
-    url.searchParams.set("size", "32");
-    url.searchParams.set("cache", "1");
-    return url.toString();
+    if (isFirefox) {
+      const domain = new URL(u).hostname;
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+    } else {
+      const url = new URL(api.runtime.getURL("/_favicon/"));
+      url.searchParams.set("pageUrl", u);
+      url.searchParams.set("size", "32");
+      url.searchParams.set("cache", "1");
+      return url.toString();
+    }
   }
 
   function getSiteName(title, url) {
