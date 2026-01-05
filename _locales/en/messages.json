@@ -867,6 +867,9 @@
     "bingWallpapersTitle": {
         "message": "Bing Wallpapers"
     },
+    "unsplashWallpapersTitle": {
+        "message": "Unsplash Wallpapers"
+    },
     "presetWallpaperTitle": {
         "message": "Preset Wallpapers",
         "description": "Title for preset wallpaper settings"

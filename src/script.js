@@ -1,26 +1,30 @@
-// Firefox 兼容性层
-const isFirefox = typeof browser !== 'undefined';
-const api = isFirefox ? browser : chrome;
-
-// 适配Firefox的sidebar_action API
-const sidePanelAPI = {
-  setOptions: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+// 使用通用浏览器API兼容性层
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
+  isFirefox: typeof browser !== 'undefined',
+  api: typeof browser !== 'undefined' ? browser : chrome,
+  sidePanelAPI: {
+    setOptions: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
-    }
-    return api.sidePanel.setOptions(options);
-  },
-  open: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.open());
+      return apiFF.sidePanel.setOptions(options);
+    },
+    open: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.open());
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
+      return apiFF.sidePanel.open(options);
     }
-    return api.sidePanel.open(options);
   }
 };
 
@@ -658,7 +662,37 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Error initializing search engine:', e);
   }
 
- 
+  // 添加鼠标快捷键功能 - 鼠标侧键前进后退
+  document.addEventListener('mousedown', function(event) {
+    // 检测鼠标侧键（后退键为4，前进键为5）
+    if (event.button === 3) { // 鼠标后退键
+      event.preventDefault();
+      console.log('[Mouse Navigation] Back button pressed');
+      
+      // 发送后退消息到背景脚本
+      api.runtime.sendMessage({ action: 'navigateBack' })
+        .catch(error => {
+          console.log('Error sending navigateBack message:', error);
+          // 如果扩展API不可用，尝试使用history.back()
+          if (window.history.length > 1) {
+            window.history.back();
+          }
+        });
+    } else if (event.button === 4) { // 鼠标前进键
+      event.preventDefault();
+      console.log('[Mouse Navigation] Forward button pressed');
+      
+      // 发送前进消息到背景脚本
+      api.runtime.sendMessage({ action: 'navigateForward' })
+        .catch(error => {
+          console.log('Error sending navigateForward message:', error);
+          // 如果扩展API不可用，尝试使用history.forward()
+          if (window.history.length > 1) {
+            window.history.forward();
+          }
+        });
+    }
+  });
 
   // 加载保存的背景颜色
   const savedBg = localStorage.getItem('selectedBackground');

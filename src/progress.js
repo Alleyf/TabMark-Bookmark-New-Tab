@@ -1,26 +1,30 @@
-// Firefox 兼容性层
-const isFirefox = typeof browser !== 'undefined';
-const api = isFirefox ? browser : chrome;
-
-// 适配Firefox的sidebar_action API
-const sidePanelAPI = {
-  setOptions: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+// 使用通用浏览器API兼容性层
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
+  isFirefox: typeof browser !== 'undefined',
+  api: typeof browser !== 'undefined' ? browser : chrome,
+  sidePanelAPI: {
+    setOptions: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
-    }
-    return api.sidePanel.setOptions(options);
-  },
-  open: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.open());
+      return apiFF.sidePanel.setOptions(options);
+    },
+    open: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.open());
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
+      return apiFF.sidePanel.open(options);
     }
-    return api.sidePanel.open(options);
   }
 };
 

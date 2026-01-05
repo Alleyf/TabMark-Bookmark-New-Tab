@@ -1,9 +1,36 @@
 // 首先引入浏览器兼容性层
 // 由于在后台脚本中无法直接加载外部JS，我们需要在manifest中声明
 
-// Firefox 兼容性处理
-const isFirefox = typeof browser !== 'undefined';
-const api = isFirefox ? browser : chrome;
+// 使用通用浏览器API兼容性层
+// 由于后台脚本无法直接引用外部JS文件，我们使用安全的初始化方式
+const { isFirefox, api, sidePanelAPI } = (typeof window !== 'undefined' && window.BrowserCompat) || {
+  isFirefox: typeof browser !== 'undefined',
+  api: typeof browser !== 'undefined' ? browser : chrome,
+  sidePanelAPI: {
+    setOptions: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
+        }
+        return Promise.resolve();
+      }
+      return apiFF.sidePanel.setOptions(options);
+    },
+    open: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.open());
+        }
+        return Promise.resolve();
+      }
+      return apiFF.sidePanel.open(options);
+    }
+  }
+};
 
 // 辅助函数：包装回调风格的API为Promise
 const promisify = (fn) => (...args) => {
@@ -16,28 +43,6 @@ const promisify = (fn) => (...args) => {
       }
     });
   });
-};
-
-// 适配Firefox的sidebar_action API
-const sidePanelAPI = {
-  setOptions: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
-      }
-      return Promise.resolve();
-    }
-    return api.sidePanel.setOptions(options);
-  },
-  open: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.open());
-      }
-      return Promise.resolve();
-    }
-    return api.sidePanel.open(options);
-  }
 };
 
 // 当扩展安装或更新时触发

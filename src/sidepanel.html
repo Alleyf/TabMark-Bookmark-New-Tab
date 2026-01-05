@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="icon" type="image/png" href="../images/favicon.png">
   <style id="dynamic-background"></style>
+  <script src="browser-api-compat.js"></script>
   <script src="localization.js"></script>
   <script src="lodash.min.js"></script>
   <script src="favicon-helper.js"></script>
@@ -255,8 +256,7 @@
             data-i18n="bookmarkManagementTab">书签管理</button>
           <button class="settings-tab-button" data-tab="wheel-switching" data-i18n="wheelSwitchingTab">滚轮切换</button>
           <button class="settings-tab-button" data-tab="shortcuts" data-i18n="shortcutsTab">快捷键</button>
-          <button class="settings-tab-button" data-tab="donate" data-i18n="donateTab">支持我们</button>
-          <button class="settings-tab-button" data-tab="about" data-i18n="aboutTab">关于</button>
+
         </div>
         <div class="settings-content">
           <div id="appearance-settings" class="settings-tab-content active">
@@ -284,6 +284,14 @@
 
             <h4 class="settings-section-title" data-i18n="wallpaperTitle">壁纸</h4>
             <div class="wallpaper-section">
+              <h4 class="settings-section-title" data-i18n="bingWallpapersTitle">必应壁纸</h4>
+              <!-- 必应壁纸区域 -->
+              <div class="bing-wallpapers-section">
+                <div class="bing-wallpapers-grid">
+                  <!-- 必应壁纸将通过 JS 动态加载 -->
+                </div>
+              </div>
+              
               <div class="wallpaper-options">
                 <div class="wallpaper-option" data-wallpaper-url="../images/wallpapers/preset1.jpg"></div>
                 <div class="wallpaper-option" data-wallpaper-url="../images/wallpapers/preset2.jpg"></div>
@@ -528,60 +536,6 @@
                   </div>
                 </div>
                 <span class="material-icons shortcut-arrow">chevron_right</span>
-              </div>
-            </div>
-          </div>
-          <div id="donate-settings" class="settings-tab-content">
-            <h3 class="settings-modal-subtitle" data-i18n="donateTitle">支持 TabMark 开发</h3>
-            <p class="donate-description" data-i18n="donateDescription">如果您觉得 TabMark
-              有用，请考虑支持它的持续开发。您的贡献将帮助我们改进扩展并添加新功能。</p>
-
-            <div class="donate-options">
-              <!-- 微信赞赏码 -->
-              <div class="donate-option">
-                <h4 class="donate-option-title" data-i18n="wechatDonateTitle">微信支付</h4>
-                <div class="donate-qrcode-container">
-                  <img src="../images/wechat-donate.png" alt="WeChat Donate QR Code" class="donate-qrcode">
-                  <p class="donate-qrcode-text" data-i18n="scanQRCodeToDonate">扫描二维码赞赏</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 赞赏列表链接 - 独立区域 -->
-            <div class="donate-list-container">
-              <a href="https://cooing-loganberry-b74.notion.site/Tabmark-1af1ee1c3b3a80d7b268fda1c74f0404" target="_blank" class="donate-list-button">
-                <span data-i18n="donateListLink">查看赞赏列表</span>
-              </a>
-            </div>
-
-            <p class="donate-thank-you" data-i18n="thankYouForSupport">感谢您的支持！</p>
-          </div>
-          <div id="about-settings" class="settings-tab-content">
-            <h3 class="settings-modal-subtitle" data-i18n="aboutTitle">关于 TabMark</h3>
-            <div class="about-content">
-              <img src="../images/logo.svg" alt="TabMark Logo" class="about-logo">
-              <p class="about-version"></p>
-              <p class="about-description" data-i18n="aboutDescription">
-                TabMark 是一个简洁、高效的书签管理扩展，帮助您更好地组织和访问您的网络收藏。
-              </p>
-              <div class="about-links">
-                <a href="https://github.com/Alanrk/TabMark-Bookmark-New-Tab" target="_blank" class="about-link">
-                  <span class="material-icons">code</span>
-                  <span data-i18n="sourceCode">源代码</span>
-                </a>
-                <a href="https://x.com/thesowhale" class="about-link" target="_blank">
-                  <img src="../images/twitter-logo.png" alt="Twitter" class="twitter-icon">
-                  <span>Twitter</span>
-                </a>
-                <a href="mailto:support@booktap.cc" class="about-link" target="_blank">
-                  <span class="material-icons">feedback</span>
-                  <span data-i18n="feedback">反馈</span>
-                </a>
-                <p class="official-website">
-                  <a href="https://www.ainewtab.app" target="_blank">
-                    <span data-i18n="officialWebsite">Official Website</span>: https://www.ainewtab.app
-                  </a>
-                </p>
               </div>
             </div>
           </div>

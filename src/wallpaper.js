@@ -1,26 +1,30 @@
-// Firefox 兼容性层
-const isFirefox = typeof browser !== 'undefined';
-const api = isFirefox ? browser : chrome;
-
-// 适配Firefox的sidebar_action API
-const sidePanelAPI = {
-  setOptions: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+// 使用通用浏览器API兼容性层
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
+  isFirefox: typeof browser !== 'undefined',
+  api: typeof browser !== 'undefined' ? browser : chrome,
+  sidePanelAPI: {
+    setOptions: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
-    }
-    return api.sidePanel.setOptions(options);
-  },
-  open: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.open());
+      return apiFF.sidePanel.setOptions(options);
+    },
+    open: (options) => {
+      const isFF = typeof browser !== 'undefined';
+      const apiFF = isFF ? browser : chrome;
+      if (isFF) {
+        if (apiFF.sidebarAction) {
+          return Promise.resolve(apiFF.sidebarAction.open());
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
+      return apiFF.sidePanel.open(options);
     }
-    return api.sidePanel.open(options);
   }
 };
 
@@ -29,7 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.WelcomeManager) {
         console.error('WelcomeManager not found. Make sure welcome.js is loaded before wallpaper.js');
     }
-    const wallpaperManager = new WallpaperManager();
+    
+    // 延迟创建 WallpaperManager 确保 DOM 完全加载
+    setTimeout(() => {
+        window.wallpaperManager = new WallpaperManager();
+        
+        // 确保壁纸列表被加载
+        if (window.wallpaperManager && typeof window.wallpaperManager.loadPresetWallpapers === 'function') {
+            setTimeout(() => {
+                window.wallpaperManager.loadPresetWallpapers();
+            }, 500);
+        }
+    }, 100);
 });
 
 // WallpaperManager 类用于处理所有壁纸相关的操作
@@ -63,35 +78,26 @@ class WallpaperManager {
         // 初始化必应壁纸
         this.bingWallpapers = [];
         this.initBingWallpapers();
+        
+        // 初始化壁纸历史记录，用于修复上传功能
+        this.wallpaperHistory = [];
+        
+
     }
 
     // 初始化预设壁纸列表
     initializePresetWallpapers() {
-        // Unsplash 精选壁纸集合 (因为没有 API Key，使用静态精选列表)
-        this.unsplashCollection = [
-            'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=1920&auto=format&fit=crop', // Nature
-            'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1920&auto=format&fit=crop', // Foggy Forest
-            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1920&auto=format&fit=crop', // Forest
-            'https://images.unsplash.com/photo-1501854140884-074cf2b21d25?q=80&w=1920&auto=format&fit=crop', // Lake
-            'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?q=80&w=1920&auto=format&fit=crop', // Stars
-            'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=1920&auto=format&fit=crop', // Alpine
-            'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1920&auto=format&fit=crop', // Mountains
-            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1920&auto=format&fit=crop', // Yosemite
-            'https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=1920&auto=format&fit=crop', // Tree
-            'https://images.unsplash.com/photo-1426604966848-d7adac402bff?q=80&w=1920&auto=format&fit=crop'  // Canyon
-        ];
-
         this.presetWallpapers = [
             {
-                url: './../images/wallpapers/wallpaper-1.jpg',
+                url: '../images/wallpapers/wallpaper-1.jpg',
                 title: 'Foggy Forest'
             },
             {
-                url: './../images/wallpapers/wallpaper-2.jpg',
+                url: '../images/wallpapers/wallpaper-2.jpg',
                 title: 'Mountain Lake'
             },
             {
-                url: './../images/wallpapers/wallpaper-3.jpg',
+                url: '../images/wallpapers/wallpaper-3.jpg',
                 title: 'Sunset Beach'
             },
             {
@@ -99,27 +105,27 @@ class WallpaperManager {
                 title: 'City Night'
             },
             {
-                url: './../images/wallpapers/wallpaper-5.jpg',
+                url: '../images/wallpapers/wallpaper-5.jpg',
                 title: 'Aurora'
             },
             {
-                url: './../images/wallpapers/wallpaper-6.jpg',
+                url: '../images/wallpapers/wallpaper-6.jpg',
                 title: 'Desert Dunes'
             },
             {
-                url: './../images/wallpapers/wallpaper-7.jpg',
+                url: '../images/wallpapers/wallpaper-7.jpg',
                 title: 'Mountain View'
             },
             {
-                url: './../images/wallpapers/wallpaper-8.jpg',
+                url: '../images/wallpapers/wallpaper-8.jpg',
                 title: 'Forest Lake'
             },
             {
-                url: './../images/wallpapers/wallpaper-9.jpg',
+                url: '../images/wallpapers/wallpaper-9.jpg',
                 title: 'Sunset Hills'
             },
             {
-                url: './../images/wallpapers/wallpaper-10.jpg',
+                url: '../images/wallpapers/wallpaper-10.jpg',
                 title: 'Ocean View'
             }
         ];
@@ -127,38 +133,71 @@ class WallpaperManager {
 
     // 修改 loadPresetWallpapers 方法，添加错误处理
     async loadPresetWallpapers() {
-        const wallpaperContainer = document.querySelector('.wallpaper-options');
+        // 尝试多个可能的容器选择器
+        const wallpaperContainer = document.querySelector('.wallpaper-options') || 
+                                  document.querySelector('.wallpaper-options-container') ||
+                                  document.querySelector('.wallpaper-section');
+        
         if (!wallpaperContainer) {
             console.error('Wallpaper container not found');
+            console.log('Available elements with class names containing "wallpaper":');
+            const elements = document.querySelectorAll('[class*="wallpaper"]');
+            elements.forEach(el => {
+                console.log(el.className, ' -> ', el);
+            });
             return;
         }
         
-        wallpaperContainer.innerHTML = '';
+        // 清空容器前先检查它是否是有效的DOM元素
+        try {
+            wallpaperContainer.innerHTML = '';
+        } catch (error) {
+            console.error('Error clearing wallpaper container:', error);
+            return;
+        }
 
         // 添加预设壁纸
         if (Array.isArray(this.presetWallpapers)) {
             this.presetWallpapers.forEach(preset => {
-                const option = this.createWallpaperOption(preset.url, preset.title);
-                wallpaperContainer.appendChild(option);
+                try {
+                    const option = this.createWallpaperOption(preset.url, preset.title);
+                    if (option) {
+                        wallpaperContainer.appendChild(option);
+                    }
+                } catch (error) {
+                    console.error('Error creating wallpaper option:', error, preset);
+                }
             });
+        } else {
+            console.warn('Preset wallpapers array is not valid:', this.presetWallpapers);
         }
 
         // 添加用户上传的壁纸
         if (Array.isArray(this.userWallpapers)) {
             this.userWallpapers.forEach(wallpaper => {
-                const option = this.createWallpaperOption(
-                    wallpaper.url,
-                    chrome.i18n.getMessage('uploadedWallpaperBadge'),
-                    true
-                );
-                wallpaperContainer.appendChild(option);
+                try {
+                    const option = this.createWallpaperOption(
+                        wallpaper.url,
+                        chrome.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded',
+                        true
+                    );
+                    if (option) {
+                        wallpaperContainer.appendChild(option);
+                    }
+                } catch (error) {
+                    console.error('Error creating uploaded wallpaper option:', error, wallpaper);
+                }
             });
         }
     }
 
     initialize() {
         this.preloadWallpapers();
-        this.loadPresetWallpapers();
+        // 使用 setTimeout 确保 DOM 完全加载后再加载壁纸
+        setTimeout(() => {
+            this.loadPresetWallpapers();
+        }, 100);
+        
         this.initializeWallpaper().then(() => {
             document.documentElement.classList.remove('loading-wallpaper');
         });
@@ -260,6 +299,7 @@ class WallpaperManager {
         document.querySelectorAll('.bing-wallpaper-item').forEach(option => {
             option.classList.remove('active');
         });
+
     }
 
     // 优化预加载方法
@@ -333,8 +373,8 @@ class WallpaperManager {
                 img.src = savedWallpaper;
             });
         } else {
-            // 如果没有保存的壁纸和背景，使用随机 Unsplash 壁纸作为默认
-            await this.setRandomUnsplashWallpaper();
+            // 如果没有保存的壁纸和背景，使用随机预设壁纸作为默认
+            await this.setRandomPresetWallpaper();
         }
     }
 
@@ -347,13 +387,24 @@ class WallpaperManager {
         await this.setWallpaper(url);
     }
 
+    // 设置随机预设壁纸
+    async setRandomPresetWallpaper() {
+        if (!this.presetWallpapers || this.presetWallpapers.length === 0) return;
+        const randomIndex = Math.floor(Math.random() * this.presetWallpapers.length);
+        const url = this.presetWallpapers[randomIndex].url;
+        
+        // 确保移除默认背景标记
+        localStorage.removeItem('useDefaultBackground');
+        await this.setWallpaper(url);
+    }
+
     // 重置壁纸
     async resetWallpaper() {
         // 清除所有选中状态
         this.clearAllActiveStates();
         
-        // 设置随机 Unsplash 壁纸作为默认
-        await this.setRandomUnsplashWallpaper();
+        // 设置随机预设壁纸作为默认
+        await this.setRandomPresetWallpaper();
         
         // 使用本地化的成功提示
         alert(chrome.i18n.getMessage('wallpaperResetSuccess'));
@@ -397,10 +448,6 @@ class WallpaperManager {
         if (!url) return;
 
         try {
-            // 如果是 Unsplash 图片，添加优化参数
-            if (url.includes('images.unsplash.com')) {
-                url = `${url}?q=80&w=1920&auto=format&fit=crop`;
-            }
 
             localStorage.removeItem('useDefaultBackground');
             document.querySelectorAll('.settings-bg-option').forEach(option => {
@@ -420,26 +467,32 @@ class WallpaperManager {
             // 在保存新壁纸前，先清除所有相关的存储
             this.clearWallpaperCache();
             
-            // 压缩图片数据以减少存储大小
-            const compressedDataUrl = await this.compressImageForStorage(dataUrl);
+            // 根据数据URL类型决定是否需要压缩
+            let saveDataUrl = dataUrl;
+            if (dataUrl.startsWith('data:image')) {
+                // 如果是data URL，进行压缩以减少存储大小
+                saveDataUrl = await this.compressImageForStorage(dataUrl);
+            }
             
             try {
                 // 尝试保存压缩后的数据
-                localStorage.setItem('originalWallpaper', compressedDataUrl);
+                localStorage.setItem('originalWallpaper', saveDataUrl);
             } catch (storageError) {
                 console.warn('无法保存壁纸到本地存储，将只保存在内存中');
             }
             
             // 更新内存缓存
             if (this.wallpaperCache) {
-                URL.revokeObjectURL(this.wallpaperCache.src);
+                if (this.wallpaperCache.src && this.wallpaperCache.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(this.wallpaperCache.src);
+                }
                 this.wallpaperCache.src = '';
             }
             this.wallpaperCache = new Image();
-            this.wallpaperCache.src = dataUrl;
+            this.wallpaperCache.src = saveDataUrl;
 
             // 应用壁纸
-            await this.applyWallpaper(dataUrl);
+            await this.applyWallpaper(saveDataUrl);
         } catch (error) {
             console.error('Failed to save wallpaper:', error);
             alert('设置壁纸失败，请重试');
@@ -456,19 +509,33 @@ class WallpaperManager {
                 
                 // 计算压缩后的尺寸，最大宽度1920px
                 const maxWidth = 1920;
-                const scale = Math.min(1, maxWidth / img.width);
+                const maxHeight = 1080;
+                const scale = Math.min(1, maxWidth / img.width, maxHeight / img.height);
                 canvas.width = img.width * scale;
                 canvas.height = img.height * scale;
                 
+                // 设置图像平滑选项
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 
-                // 使用较低的质量来减少数据大小
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', 1);
+                // 使用中等的质量来平衡大小和质量
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
                 
                 // 清理内存
-                URL.revokeObjectURL(img.src);
+                if (dataUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(dataUrl);
+                }
                 resolve(compressedDataUrl);
             };
+            
+            img.onerror = () => {
+                console.error('Failed to load image for compression');
+                // 如果加载失败，返回原始数据URL
+                resolve(dataUrl);
+            };
+            
             img.src = dataUrl;
         });
     }
@@ -494,7 +561,7 @@ class WallpaperManager {
     // 处理文件上传
     handleFileUpload(event) {
         const file = event.target.files[0];
-        if (!this.validateFile(file)) return;
+        if (!file || !this.validateFile(file)) return;
 
         const reader = new FileReader();
 
@@ -509,14 +576,14 @@ class WallpaperManager {
                     timestamp: Date.now()
                 });
 
-                // 修改限制数量，比如改为10张
-                const MAX_WALLPAPERS = 1;
+                // 限制数量，最多保留5张上传的壁纸
+                const MAX_WALLPAPERS = 5;
                 if (this.userWallpapers.length > MAX_WALLPAPERS) {
                     // 删除最旧的壁纸
                     const removedWallpapers = this.userWallpapers.splice(MAX_WALLPAPERS);
                     // 清理被删除壁纸的资源
                     removedWallpapers.forEach(wallpaper => {
-                        if (wallpaper.url) {
+                        if (wallpaper.url && wallpaper.url.startsWith('blob:')) {
                             URL.revokeObjectURL(wallpaper.url);
                         }
                     });
@@ -529,7 +596,10 @@ class WallpaperManager {
                     console.warn('Storage quota exceeded, removing oldest wallpapers');
                     // 如果存储失败，继续删除旧壁纸直到能够存储为止
                     while (this.userWallpapers.length > 1) {
-                        this.userWallpapers.pop();
+                        const removed = this.userWallpapers.pop();
+                        if (removed && removed.url && removed.url.startsWith('blob:')) {
+                            URL.revokeObjectURL(removed.url);
+                        }
                         try {
                             localStorage.setItem('userWallpapers', JSON.stringify(this.userWallpapers));
                             break;
@@ -539,6 +609,7 @@ class WallpaperManager {
                     }
                 }
 
+                // 重新加载壁纸选项并设置壁纸
                 await this.loadPresetWallpapers();
                 await this.setWallpaper(compressedDataUrl);
                 
@@ -547,7 +618,10 @@ class WallpaperManager {
                 alert('设置壁纸失败，请重试');
             }
         };
-        reader.onerror = () => alert(chrome.i18n.getMessage('fileReadError'));
+        reader.onerror = () => {
+            console.error('文件读取错误');
+            alert(chrome.i18n.getMessage('fileReadError') || '文件读取失败');
+        };
         reader.readAsDataURL(file);
         
         event.target.value = '';
@@ -557,11 +631,13 @@ class WallpaperManager {
     validateFile(file) {
         if (!file) return false;
         if (!file.type.startsWith('image/')) {
-            alert(chrome.i18n.getMessage('pleaseUploadImage'));
+            alert(chrome.i18n.getMessage('pleaseUploadImage') || '请上传图片文件');
             return false;
         }
-        if (file.size > 10 * 1024 * 1024) {
-            alert(chrome.i18n.getMessage('imageSizeExceeded'));
+        // 将最大文件大小增加到50MB以支持高质量壁纸
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+            alert((chrome.i18n.getMessage('imageSizeExceeded') || '图片大小不能超过50MB') + ' (当前: ' + (file.size / (1024 * 1024)).toFixed(2) + 'MB)');
             return false;
         }
         return true;
@@ -668,13 +744,20 @@ class WallpaperManager {
         option.className = 'wallpaper-option';
         option.dataset.wallpaperUrl = url;
         option.title = title;
-        option.style.backgroundImage = `url('${url}')`;
+        
+        // 确保壁纸URL有效
+        if (url) {
+            option.style.backgroundImage = `url('${url}')`;
+        } else {
+            console.error('Invalid wallpaper URL provided:', url);
+            return null; // 如果URL无效，返回null
+        }
 
         // 如果是上传的壁纸，添加标识
         if (isUploaded) {
             const badge = document.createElement('span');
             badge.className = 'uploaded-wallpaper-badge';
-            badge.textContent = chrome.i18n.getMessage('uploadedWallpaperBadge');
+            badge.textContent = chrome.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded';
             option.appendChild(badge);
         }
 
@@ -685,6 +768,10 @@ class WallpaperManager {
             document.querySelectorAll('.wallpaper-option').forEach(opt => {
                 opt.classList.remove('active');
             });
+            document.querySelectorAll('.bing-wallpaper-item').forEach(opt => {
+                opt.classList.remove('active');
+            });
+
             option.classList.add('active');
             document.documentElement.className = '';
             this.setWallpaper(url);
@@ -786,6 +873,8 @@ class WallpaperManager {
                 });
                 // 更新localStorage
                 localStorage.setItem('userWallpapers', JSON.stringify(this.userWallpapers));
+            } else {
+                this.userWallpapers = [];
             }
         } catch (error) {
             console.error('Failed to load user wallpapers:', error);
@@ -848,42 +937,122 @@ class WallpaperManager {
     // 初始化必应壁纸
     async initBingWallpapers() {
         try {
-            // 获取8天的必应壁纸
-            const wallpapers = await this.fetchBingWallpapers(4);
+            // 获取必应壁纸，增加数量以提供更多选择
+            const wallpapers = await this.fetchBingWallpapers(8);
             this.bingWallpapers = wallpapers;
             
             // 渲染壁纸
             this.renderBingWallpapers();
+            
+            console.log(`Successfully loaded ${wallpapers.length} Bing wallpapers`);
         } catch (error) {
             console.error('Failed to initialize Bing wallpapers:', error);
+            
+            // 使用备选方案
+            this.bingWallpapers = this.presetWallpapers.slice(0, 4).map(wp => ({
+                url: wp.url,
+                title: wp.title,
+                copyright: 'Fallback wallpaper',
+                date: new Date().toISOString().slice(0, 8).replace(/-/g, ''),
+                hash: 'fallback'
+            }));
+            
+            this.renderBingWallpapers();
         }
     }
 
     // 获取必应壁纸
     async fetchBingWallpapers(count = 4) {
         try {
-            // 使用中国的必应 API，添加 UHD 参数获取高清壁纸
-            const response = await fetch(
-                `https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=${count}&mkt=zh-CN&uhd=1&uhdwidth=3840&uhdheight=2160`
-            );
-            const data = await response.json();
+            // 首先尝试使用Chrome扩展的权限来直接访问Bing API
+            const endpoints = [
+                `https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=${count}&mkt=en-US`,
+                `https://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=${count}&mkt=zh-CN`,
+                `https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=${count}&mkt=en-US&uhd=1&uhdwidth=3840&uhdheight=2160`
+            ];
+            
+            let data = null;
+            let response = null;
+            
+            // 尝试不同的端点直到成功
+            for (const endpoint of endpoints) {
+                try {
+                    response = await fetch(endpoint, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                            'Referer': 'https://www.bing.com/'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        data = await response.json();
+                        break; // 成功获取数据，跳出循环
+                    } else {
+                        console.warn(`Bing API request failed with status: ${response.status} for endpoint: ${endpoint}`);
+                    }
+                } catch (e) {
+                    console.warn(`Failed to fetch from ${endpoint}:`, e.message);
+                    continue; // 尝试下一个端点
+                }
+            }
             
             if (!data?.images) {
-                console.error('No images data in response');
-                return [];
+                console.error('No images data in response from any endpoint');
+                // 尝试使用本地预设壁纸作为备选
+                return this.presetWallpapers.slice(0, count).map((wp, index) => ({
+                    url: wp.url,
+                    title: wp.title,
+                    copyright: 'Local wallpaper',
+                    date: new Date().toISOString().slice(0, 8).replace(/-/g, ''),
+                    hash: `local-${index}`
+                }));
             }
 
             // 使用解构赋值和箭头函数简化代码
-            return data.images.map(({ url, title, copyright, startdate }) => ({
-                // 使用中国的必应域名
-                url: `https://cn.bing.com${url}`,
-                title: title || copyright?.split('(')[0]?.trim() || 'Bing Wallpaper',
-                copyright,
-                date: startdate
-            }));
+            return data.images.map(({ url, title, copyright, startdate, hsh }) => {
+                // 构造完整URL，处理可能的URL格式问题
+                let fullUrl = url.startsWith('http') ? url : `https://www.bing.com${url}`;
+                
+                // 确保URL包含正确的参数
+                try {
+                    const urlObj = new URL(fullUrl);
+                    if (!urlObj.searchParams.has('w')) {
+                        urlObj.searchParams.set('w', '1920');
+                    }
+                    if (!urlObj.searchParams.has('h')) {
+                        urlObj.searchParams.set('h', '1080');
+                    }
+                    if (!urlObj.searchParams.has('q')) {
+                        urlObj.searchParams.set('q', '80');
+                    }
+                    fullUrl = urlObj.toString();
+                } catch (urlError) {
+                    console.warn('Invalid URL, using original:', fullUrl, urlError);
+                    // 如果URL无效，使用原始URL
+                }
+                
+                return {
+                    url: fullUrl,
+                    title: title || copyright?.split('(')[0]?.trim() || 'Bing Wallpaper',
+                    copyright,
+                    date: startdate,
+                    hash: hsh
+                };
+            });
         } catch (error) {
             console.error('Failed to fetch Bing wallpapers:', error);
-            return [];
+            // 返回静态壁纸作为备选
+            return this.presetWallpapers.slice(0, count).map((wp, index) => {
+                return {
+                    url: wp.url,
+                    title: wp.title,
+                    copyright: 'Local fallback wallpaper',
+                    date: new Date().toISOString().slice(0, 8).replace(/-/g, ''),
+                    hash: `fallback-${index}`
+                };
+            });
         }
     }
 
@@ -936,6 +1105,8 @@ class WallpaperManager {
             return dateStr;
         }
     }
+    
+    
 }
 
 function optimizeMemoryUsage(img) {
@@ -944,4 +1115,66 @@ function optimizeMemoryUsage(img) {
     img.onload = null;
     img.src = '';
     URL.revokeObjectURL(url);
+}
+
+// 测试函数，用于验证壁纸功能是否正常工作
+function testWallpaperFeatures() {
+    console.log('Testing wallpaper features...');
+    
+    // 检查 WallpaperManager 类是否定义
+    if (typeof WallpaperManager !== 'undefined') {
+        console.log('✓ WallpaperManager class is defined');
+        
+        // 检查实例是否存在
+        if (window.wallpaperManager) {
+            console.log('✓ WallpaperManager instance exists');
+            
+            // 检查关键功能是否存在
+            const methodsToCheck = [
+                'initBingWallpapers',
+                'initUnsplashWallpapers',
+                'fetchBingWallpapers',
+                'fetchUnsplashWallpapers',
+                'setRandomUnsplashWallpaper',
+                'loadPresetWallpapers'
+            ];
+            
+            let allMethodsExist = true;
+            methodsToCheck.forEach(method => {
+                if (typeof window.wallpaperManager[method] === 'function') {
+                    console.log(`✓ ${method} method exists`);
+                } else {
+                    console.log(`✗ ${method} method missing`);
+                    allMethodsExist = false;
+                }
+            });
+            
+            if (allMethodsExist) {
+                console.log('✓ All required methods are present');
+                
+                // 尝试加载预设壁纸
+                try {
+                    window.wallpaperManager.loadPresetWallpapers();
+                    console.log('✓ Preset wallpapers loaded successfully');
+                } catch (e) {
+                    console.error('✗ Error loading preset wallpapers:', e);
+                }
+            }
+        } else {
+            console.log('✗ WallpaperManager instance not found in window');
+        }
+    } else {
+        console.log('✗ WallpaperManager class is not defined');
+    }
+    
+    console.log('Wallpaper feature testing completed.');
+}
+
+// 在 DOM 内容加载完成后运行测试
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(testWallpaperFeatures, 3000); // 延迟执行以确保初始化完成
+    });
+} else {
+    setTimeout(testWallpaperFeatures, 3000); // 延迟执行以确保初始化完成
 }

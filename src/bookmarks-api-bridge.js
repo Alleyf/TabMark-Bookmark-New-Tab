@@ -6,8 +6,10 @@
 (function() {
   'use strict';
 
-  const isFirefox = typeof browser !== 'undefined';
-  const api = isFirefox ? browser : chrome;
+  const { isFirefox, api } = window.BrowserCompat || {
+    isFirefox: typeof browser !== 'undefined',
+    api: typeof browser !== 'undefined' ? browser : chrome
+  };
 
   if (!isFirefox) {
     // Chrome环境，不需要桥接
