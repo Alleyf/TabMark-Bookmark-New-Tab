@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 导航处理脚本 - 用于处理iframe中的导航栏
 
 // 保存当前URL，用于检测导航变化
@@ -20,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('[Navigation Handler] This page is loaded in a side panel iframe');
     
     // 获取存储的导航数据
-    chrome.storage.local.get('sidePanelNavData', function(data) {
+    api.storage.local.get('sidePanelNavData', function(data) {
       if (data && data.sidePanelNavData) {
         const { history, currentIndex } = data.sidePanelNavData;
         injectNavBarInIframe(history, currentIndex, window.location.href);
@@ -39,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 直接调用Chrome API返回主页
         try {
-          chrome.runtime.sendMessage({ 
+          api.runtime.sendMessage({ 
             action: 'navigateHome',
             source: 'keyboard-shortcut',
             timestamp: Date.now()
@@ -261,7 +287,7 @@ function injectNavBarInIframe(history, currentIndex, url) {
     try {
       console.log('[Navigation Handler] Attempting direct URL navigation');
       // 获取扩展根URL
-      const extensionUrl = chrome.runtime.getURL('src/sidepanel.html');
+      const extensionUrl = api.runtime.getURL('src/sidepanel.html');
       
       // 由于iframe中可能受到限制，通知父窗口执行导航
       window.parent.postMessage({ 
@@ -283,9 +309,9 @@ function injectNavBarInIframe(history, currentIndex, url) {
     }
     
     // 2. 优先使用Chrome API
-    if (!succeeded && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    if (!succeeded && typeof chrome !== 'undefined' && chrome.runtime && api.runtime.sendMessage) {
       try {
-        chrome.runtime.sendMessage({ 
+        api.runtime.sendMessage({ 
           action: 'navigateHome',
           source: 'iframe-direct',
           timestamp: Date.now()
@@ -392,7 +418,7 @@ function injectNavBarInIframe(history, currentIndex, url) {
       window.parent.postMessage({ action: 'navigateHome' }, '*');
       // 同时尝试通过chrome API发送
       try {
-        chrome.runtime.sendMessage({ action: 'navigateHome' });
+        api.runtime.sendMessage({ action: 'navigateHome' });
       } catch (e) {
         console.log('[Navigation Handler] Failed to send message via chrome API:', e);
       }
@@ -404,7 +430,7 @@ function injectNavBarInIframe(history, currentIndex, url) {
       console.log('[Navigation Handler] Back button clicked in iframe');
       window.parent.postMessage({ action: 'navigateBack' }, '*');
       try {
-        chrome.runtime.sendMessage({ action: 'navigateBack' });
+        api.runtime.sendMessage({ action: 'navigateBack' });
       } catch (e) {
         console.log('[Navigation Handler] Failed to send message via chrome API:', e);
       }
@@ -416,7 +442,7 @@ function injectNavBarInIframe(history, currentIndex, url) {
       console.log('[Navigation Handler] Forward button clicked in iframe');
       window.parent.postMessage({ action: 'navigateForward' }, '*');
       try {
-        chrome.runtime.sendMessage({ action: 'navigateForward' });
+        api.runtime.sendMessage({ action: 'navigateForward' });
       } catch (e) {
         console.log('[Navigation Handler] Failed to send message via chrome API:', e);
       }

@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 import { featureTips } from './feature-tips.js';
 
 // 书签清理插件相关常量
@@ -10,7 +36,7 @@ const CLEANUP_EXTENSION = {
 function checkExtensionInstalled() {
   return new Promise((resolve, reject) => {
     chrome.management.get(CLEANUP_EXTENSION.ID, (extensionInfo) => {
-      if (chrome.runtime.lastError) {
+      if (api.runtime.lastError) {
         reject(new Error('Extension not installed'));
       } else {
         resolve(true);

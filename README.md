@@ -2,14 +2,15 @@
 
 ## 项目网站: www.ainewtab.app
 
-TabMark 将收藏夹变成新标签页，让你收藏的书签一目了然、整洁高效，快速直达你最需要的网站和资源。搭配智能 AI 搜索，更快找到你想要的答案。支持 Chrome 和 Edge。
+TabMark 将收藏夹变成新标签页，让你收藏的书签一目了然、整洁高效，快速直达你最需要的网站和资源。搭配智能 AI 搜索，更快找到你想要的答案。支持 Chrome、Edge 和 Firefox。
 
 ![MacBook Air 13_ - 5@1x](https://github.com/user-attachments/assets/bb4f9996-902c-4b69-8a7f-4c2b2e219ffc)
 
 ## 请注意由于chrome 商店新的条款要求，拓展不允许同时修改新标签页和搜索功能，故chrome 商店版本暂时无法更新
 
-- chrome 商店版本：1.243（实际为 1.241 版本，为 1.242 版本回滚）
+- Chrome 商店版本：1.243（实际为 1.241 版本，为 1.242 版本回滚）
 - Edge版本：1.245 审核中
+- Firefox版本：1.245 ✨ **新发布！**（支持Firefox完全兼容）
 - GitHub 版本：1.245
 
 ## 主要功能
@@ -33,6 +34,28 @@ TabMark 将收藏夹变成新标签页，让你收藏的书签一目了然、整
 
 ### 使用教程
 https://cooing-loganberry-b74.notion.site/TabMark-Bookmark-New-Tab-7a083a74f84e4bb48345e389c1e53717
+
+### Firefox版本安装
+
+Firefox用户可以按照以下步骤安装：
+
+1. **临时加载（开发测试）**：
+   - 打开 `about:debugging`
+   - 点击"此 Firefox"
+   - 点击"临时载入附加组件..."
+   - 选择项目根目录的 `manifest.json` 文件
+
+2. **正式安装**：
+   - 将整个扩展文件夹压缩为ZIP
+   - 打开 `about:addons`
+   - 点击"从文件安装附加组件..."
+   - 选择ZIP文件并安装
+
+详细说明请查看 [Firefox安装指南](./FIREFOX_INSTALLATION.md)
+
+### Chrome版本安装
+
+Chrome用户请直接从Chrome Web Store安装，或查看GitHub Releases下载最新版本。
 
 ### 反馈建议
 

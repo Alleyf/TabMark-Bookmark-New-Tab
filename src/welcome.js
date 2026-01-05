@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 let userName = localStorage.getItem('userName') || 'Sowhale';
 
 // 集中管理欢迎消息的颜色逻辑
@@ -10,7 +36,7 @@ const WelcomeManager = {
     // 初始化方法
     initialize() {
         // 先检查欢迎语是否应该显示，再更新内容
-        chrome.storage.sync.get(['showWelcomeMessage'], (result) => {
+        api.storage.sync.get(['showWelcomeMessage'], (result) => {
             const welcomeElement = document.getElementById('welcome-message');
             if (welcomeElement) {
                 // 立即设置显示状态，避免闪烁
@@ -50,7 +76,7 @@ const WelcomeManager = {
             
             // 只有在需要时才检查显示状态
             if (checkVisibility) {
-                chrome.storage.sync.get(['showWelcomeMessage'], (result) => {
+                api.storage.sync.get(['showWelcomeMessage'], (result) => {
                     welcomeElement.style.display = result.showWelcomeMessage !== false ? '' : 'none';
                 });
             }

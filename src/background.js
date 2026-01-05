@@ -1,11 +1,53 @@
+// 首先引入浏览器兼容性层
+// 由于在后台脚本中无法直接加载外部JS，我们需要在manifest中声明
+
+// Firefox 兼容性处理
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 辅助函数：包装回调风格的API为Promise
+const promisify = (fn) => (...args) => {
+  return new Promise((resolve, reject) => {
+    fn(...args, (result) => {
+      if (api.runtime.lastError) {
+        reject(new Error(api.runtime.lastError.message));
+      } else {
+        resolve(result);
+      }
+    });
+  });
+};
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 当扩展安装或更新时触发
-chrome.runtime.onInstalled.addListener((details) => {
+api.runtime.onInstalled.addListener((details) => {
   console.log("Extension installed or updated:", details.reason);
-  
-  if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
-    chrome.tabs.create({ url: "chrome://newtab" });
-    chrome.storage.local.set({ defaultBookmarkId: null });
-    chrome.storage.sync.set({ 
+
+  if (details.reason === (isFirefox ? 'install' : api.runtime.OnInstalledReason.INSTALL)) {
+    api.tabs.create({ url: api.runtime.getURL("src/index.html") });
+    api.storage.local.set({ defaultBookmarkId: null });
+    api.storage.sync.set({
       openInNewTab: true, // 默认在新标签页打开
       sidepanelOpenInNewTab: true, // 默认在新标签页打开
       sidepanelOpenInSidepanel: false // 默认不在侧边栏内打开
@@ -13,26 +55,16 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 
   // 检查命令是否正确注册
-  chrome.commands.getAll((commands) => {
+  api.commands.getAll((commands) => {
     console.log("Registered commands:", commands);
-    
-    // 查找侧边栏命令
-    const sidePanelCommand = commands.find(cmd => cmd.name === "open_side_panel");
+
+    // Firefox 使用 _execute_sidebar_action 命令
+    const commandName = isFirefox ? "_execute_sidebar_action" : "open_side_panel";
+    const sidePanelCommand = commands.find(cmd => cmd.name === commandName);
     if (sidePanelCommand) {
       console.log("Side panel command registered with shortcut:", sidePanelCommand.shortcut);
     } else {
       console.warn("Side panel command not found! Available commands:", commands.map(cmd => cmd.name).join(", "));
-      
-      // 检查是否有其他可能的侧边栏命令
-      const alternativeCommand = commands.find(cmd => 
-        cmd.name === "_execute_action_with_ui" || 
-        cmd.name.includes("side") || 
-        cmd.name.includes("panel")
-      );
-      
-      if (alternativeCommand) {
-        console.log("Found alternative command that might be for side panel:", alternativeCommand);
-      }
     }
   });
   

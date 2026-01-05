@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 import { ICONS } from './icons.js';
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -8,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let quickLinkToDelete = null;
 
   function faviconURL(u) {
-    const url = new URL(chrome.runtime.getURL("/_favicon/"));
+    const url = new URL(api.runtime.getURL("/_favicon/"));
     url.searchParams.set("pageUrl", u);
     url.searchParams.set("size", "32");
     url.searchParams.set("cache", "1");
@@ -95,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // 获取固定的快捷方式
   function getFixedShortcuts() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get('fixedShortcuts', (result) => {
+      api.storage.sync.get('fixedShortcuts', (result) => {
         resolve(result.fixedShortcuts || []);
       });
     });
@@ -103,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // 更新固定的快捷方式
   function updateFixedShortcut(updatedSite, oldUrl) {
-    chrome.storage.sync.get('fixedShortcuts', (result) => {
+    api.storage.sync.get('fixedShortcuts', (result) => {
       let fixedShortcuts = result.fixedShortcuts || [];
       const index = fixedShortcuts.findIndex(s => s.url === oldUrl);
       if (index !== -1) {
@@ -111,9 +137,9 @@ document.addEventListener('DOMContentLoaded', function () {
       } else {
         fixedShortcuts.push(updatedSite);
       }
-      chrome.storage.sync.set({ fixedShortcuts }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Error saving updated shortcut:', chrome.runtime.lastError);
+      api.storage.sync.set({ fixedShortcuts }, () => {
+        if (api.runtime.lastError) {
+          console.error('Error saving updated shortcut:', api.runtime.lastError);
         } else {
           refreshQuickLink(updatedSite, oldUrl);
           setTimeout(() => generateQuickLinks(), 0);
@@ -263,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    chrome.history.search({ 
+    api.history.search({ 
       text: '', 
       startTime: oneMonthAgo.getTime(),
       maxResults: 1000
@@ -312,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    chrome.history.search({ 
+    api.history.search({ 
       text: '', 
       startTime: oneMonthAgo.getTime(),
       maxResults: 1000
@@ -383,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (isSidePanel) {
             console.log('[Quick Link Click] Opening in Side Panel mode');
             // 获取侧边栏模式下的链接打开方式设置
-            chrome.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
+            api.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
               // 默认在新标签页中打开
               const openInNewTab = result.sidepanelOpenInNewTab !== false;
               const openInSidepanel = result.sidepanelOpenInSidepanel === true;
@@ -428,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function () {
                       backButton.style.display = 'flex';
                     } else {
                       console.error('[Quick Link Click] Side panel elements not found, falling back to new tab');
-                      chrome.tabs.create({
+                      api.tabs.create({
                         url: site.url,
                         active: true
                       });
@@ -443,14 +469,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch (error) {
                   console.error('[Quick Link Click] Error using SidePanelManager:', error);
                   // 出错时回退到在新标签页中打开
-                  chrome.tabs.create({
+                  api.tabs.create({
                     url: site.url,
                     active: true
                   });
                 }
               } else if (openInNewTab) {
                 // 在新标签页中打开
-                chrome.tabs.create({
+                api.tabs.create({
                   url: site.url,
                   active: true
                 }).then(tab => {
@@ -463,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
           } else {
             console.log('[Quick Link Click] Opening in Main Window mode');
             // 在主页面中根据设置决定打开方式
-            chrome.storage.sync.get(['openInNewTab'], (result) => {
+            api.storage.sync.get(['openInNewTab'], (result) => {
               console.log('[Quick Link Click] Settings check:', {
                 openInNewTab: result.openInNewTab
               });
@@ -731,10 +757,10 @@ document.addEventListener('DOMContentLoaded', function () {
           if (added) {
             if (quickLinkToDelete.fixed) {
               console.log('Removing fixed shortcut:', quickLinkToDelete);
-              chrome.storage.sync.get('fixedShortcuts', (result) => {
+              api.storage.sync.get('fixedShortcuts', (result) => {
                 const fixedShortcuts = result.fixedShortcuts || [];
                 const updatedShortcuts = fixedShortcuts.filter(s => s.url !== quickLinkToDelete.url);
-                chrome.storage.sync.set({ fixedShortcuts: updatedShortcuts });
+                api.storage.sync.set({ fixedShortcuts: updatedShortcuts });
               });
             }
             generateQuickLinks();
@@ -935,7 +961,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // 获取黑名单
   function getBlacklist() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get('blacklist', (result) => {
+      api.storage.sync.get('blacklist', (result) => {
         resolve(result.blacklist || []);
       });
     });
@@ -944,11 +970,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // 添加到黑名单
   function addToBlacklist(domain) {
     return new Promise((resolve) => {
-      chrome.storage.sync.get('blacklist', (result) => {
+      api.storage.sync.get('blacklist', (result) => {
         let blacklist = result.blacklist || [];
         if (!blacklist.includes(domain)) {
           blacklist.push(domain);
-          chrome.storage.sync.set({ blacklist }, () => {
+          api.storage.sync.set({ blacklist }, () => {
             resolve(true);
           });
         } else {

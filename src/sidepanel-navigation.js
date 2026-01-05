@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 侧边栏导航脚本
 (function() {
   console.log('[SidePanel Navigation] 脚本开始加载');
@@ -68,7 +94,7 @@
   
   // Chrome消息监听器 - 来自background.js的消息
   if (isChromeExtension) {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    api.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log('[SidePanel Navigation] 收到Chrome消息:', message);
       
       try {
@@ -144,7 +170,7 @@
           const targetUrl = linkElement.href;
           
           // 向后台脚本发送消息，更新导航历史
-          chrome.runtime.sendMessage({
+          api.runtime.sendMessage({
             action: 'updateSidePanelHistory',
             url: targetUrl,
             source: 'in_page_navigation'
@@ -189,7 +215,7 @@
       // 记录URL变化
       if (isChromeExtension) {
         try {
-          chrome.runtime.sendMessage({
+          api.runtime.sendMessage({
             action: 'updateSidePanelHistory',
             url: window.location.href,
             source: 'pushState'
@@ -224,7 +250,7 @@
       // 记录URL变化
       if (isChromeExtension) {
         try {
-          chrome.runtime.sendMessage({
+          api.runtime.sendMessage({
             action: 'updateSidePanelHistory',
             url: window.location.href,
             source: 'replaceState'
@@ -242,7 +268,7 @@
     window.addEventListener('popstate', function() {
       if (isChromeExtension) {
         try {
-          chrome.runtime.sendMessage({
+          api.runtime.sendMessage({
             action: 'updateSidePanelHistory',
             url: window.location.href,
             source: 'popstate'
@@ -321,8 +347,8 @@
           chrome.runtime.getContexts({
             contextTypes: ["SIDE_PANEL"]
           }, (contexts) => {
-            if (chrome.runtime.lastError) {
-              console.log('[SidePanel Navigation] API检测错误:', chrome.runtime.lastError);
+            if (api.runtime.lastError) {
+              console.log('[SidePanel Navigation] API检测错误:', api.runtime.lastError);
               resolve(false);
               return;
             }
@@ -339,8 +365,8 @@
             
             // 检查当前上下文是否是侧边栏
             chrome.runtime.getContextId((currentContext) => {
-              if (chrome.runtime.lastError) {
-                console.log('[SidePanel Navigation] 获取当前上下文错误:', chrome.runtime.lastError);
+              if (api.runtime.lastError) {
+                console.log('[SidePanel Navigation] 获取当前上下文错误:', api.runtime.lastError);
                 resolve(false);
                 return;
               }
@@ -868,7 +894,7 @@
     homeButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
     homeButton.addEventListener('click', () => {
       if (isChromeExtension) {
-        chrome.runtime.sendMessage({ action: 'navigateHome' });
+        api.runtime.sendMessage({ action: 'navigateHome' });
       } else {
         console.log('[SidePanel Navigation] Chrome Extension API not available for navigateHome');
       }
@@ -881,7 +907,7 @@
     backButton.disabled = true; // 默认禁用，等待历史记录加载
     backButton.addEventListener('click', () => {
       if (isChromeExtension) {
-        chrome.runtime.sendMessage({ action: 'navigateBack' });
+        api.runtime.sendMessage({ action: 'navigateBack' });
       } else {
         console.log('[SidePanel Navigation] Chrome Extension API not available for navigateBack');
         // 在普通网页中可以使用浏览器的返回功能
@@ -896,7 +922,7 @@
     forwardButton.disabled = true; // 默认禁用，等待历史记录加载
     forwardButton.addEventListener('click', () => {
       if (isChromeExtension) {
-        chrome.runtime.sendMessage({ action: 'navigateForward' });
+        api.runtime.sendMessage({ action: 'navigateForward' });
       } else {
         console.log('[SidePanel Navigation] Chrome Extension API not available for navigateForward');
         // 在普通网页中可以使用浏览器的前进功能
@@ -919,7 +945,7 @@
     openInNewTabButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>';
     openInNewTabButton.addEventListener('click', () => {
       if (isChromeExtension) {
-        chrome.tabs.create({ url: window.location.href });
+        api.tabs.create({ url: window.location.href });
       } else {
         console.log('[SidePanel Navigation] Chrome Extension API not available for openInNewTab');
         // 在普通网页中使用window.open
@@ -943,7 +969,7 @@
       
       // 保存用户偏好，仅当Chrome API可用时
       if (isChromeExtension) {
-        chrome.storage.local.set({
+        api.storage.local.set({
           'sidepanel_nav_compact_mode': navBar.classList.contains('compact-mode')
         });
       } else {
@@ -975,7 +1001,7 @@
     // 如果Chrome API可用，从存储中获取历史记录状态
     if (isChromeExtension) {
       // 从存储中获取历史记录状态，更新按钮状态
-      chrome.storage.local.get(['sidePanelHistory', 'sidePanelCurrentIndex', 'sidepanel_nav_compact_mode'], (result) => {
+      api.storage.local.get(['sidePanelHistory', 'sidePanelCurrentIndex', 'sidepanel_nav_compact_mode'], (result) => {
         // 还原用户的紧凑模式偏好
         if (result.sidepanel_nav_compact_mode) {
           navBar.classList.add('compact-mode');
@@ -1004,7 +1030,7 @@
       });
       
       // 监听来自背景脚本的消息
-      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      api.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           if (message && message.action === "updateNavigationState") {
             console.log('[SidePanel Navigation] Received navigation state update:', message);

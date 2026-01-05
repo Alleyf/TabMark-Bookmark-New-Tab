@@ -1,24 +1,50 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 定义全局SidePanelManager类
 class SidePanelManager {
   constructor() {
     this.history = [];
     this.currentIndex = -1;
     this.isNavigating = false;
-    
+
     this.init();
   }
 
   init() {
     if (!this.isSidePanel()) return;
-    
+
     // 不再在初始化时直接添加导航栏
     // this.addNavigationBar();
-    
+
     // 初始化事件监听
     this.initEventListeners();
-    
+
     // 监听来自内容脚本的消息
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    api.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === "navigateBack") {
         this.navigateBack();
         sendResponse({ success: true });
@@ -29,7 +55,7 @@ class SidePanelManager {
         this.navigateHome();
         sendResponse({ success: true });
       } else if (message.action === "getCurrentHistory") {
-        sendResponse({ 
+        sendResponse({
           history: this.history,
           currentIndex: this.currentIndex
         });
@@ -99,7 +125,7 @@ class SidePanelManager {
         icon.textContent = navBar.classList.contains('compact-mode') ? 'expand_less' : 'expand_more';
         
         // 保存用户偏好
-        chrome.storage.local.set({
+        api.storage.local.set({
           'sidepanel_nav_compact_mode': navBar.classList.contains('compact-mode')
         });
       });
@@ -344,7 +370,7 @@ class SidePanelManager {
         console.log('[SidePanelManager] Successfully navigated back');
         
         // 更新存储中的历史状态
-        chrome.storage.local.set({
+        api.storage.local.set({
           sidePanelNavData: {
             history: this.history,
             currentIndex: this.currentIndex
@@ -391,7 +417,7 @@ class SidePanelManager {
         console.log('[SidePanelManager] Successfully navigated forward');
         
         // 更新存储中的历史状态
-        chrome.storage.local.set({
+        api.storage.local.set({
           sidePanelNavData: {
             history: this.history,
             currentIndex: this.currentIndex

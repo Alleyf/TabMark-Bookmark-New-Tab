@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 导入所需的依赖
 import { ICONS } from './icons.js';
 
@@ -138,7 +164,7 @@ class SettingsManager {
     // 悬浮球设置
     if (this.enableFloatingBallCheckbox) {
       this.enableFloatingBallCheckbox.addEventListener('change', () => {
-        chrome.storage.sync.set({
+        api.storage.sync.set({
           enableFloatingBall: this.enableFloatingBallCheckbox.checked
         });
       });
@@ -267,7 +293,7 @@ class SettingsManager {
 
   loadSavedSettings() {
     // 加载悬浮球设置
-    chrome.storage.sync.get(['enableFloatingBall'], (result) => {
+    api.storage.sync.get(['enableFloatingBall'], (result) => {
       this.enableFloatingBallCheckbox.checked = result.enableFloatingBall !== false;
     });
 
@@ -352,7 +378,7 @@ class SettingsManager {
 
   initQuickLinksSettings() {
     // 加载快捷链接设置
-    chrome.storage.sync.get(['enableQuickLinks'], (result) => {
+    api.storage.sync.get(['enableQuickLinks'], (result) => {
       this.enableQuickLinksCheckbox.checked = result.enableQuickLinks !== false;
       this.toggleQuickLinksVisibility(this.enableQuickLinksCheckbox.checked);
     });
@@ -360,7 +386,7 @@ class SettingsManager {
     // 监听快捷链接设置变化
     this.enableQuickLinksCheckbox.addEventListener('change', () => {
       const isEnabled = this.enableQuickLinksCheckbox.checked;
-      chrome.storage.sync.set({ enableQuickLinks: isEnabled }, () => {
+      api.storage.sync.set({ enableQuickLinks: isEnabled }, () => {
         this.toggleQuickLinksVisibility(isEnabled);
       });
     });
@@ -375,7 +401,7 @@ class SettingsManager {
 
   initFloatingBallSettings() {
     // 加载悬浮球设置
-    chrome.storage.sync.get(['enableFloatingBall'], (result) => {
+    api.storage.sync.get(['enableFloatingBall'], (result) => {
       this.enableFloatingBallCheckbox.checked = result.enableFloatingBall !== false;
     });
 
@@ -383,12 +409,12 @@ class SettingsManager {
     this.enableFloatingBallCheckbox.addEventListener('change', () => {
       const isEnabled = this.enableFloatingBallCheckbox.checked;
       // 发送消息到 background script
-      chrome.runtime.sendMessage({
+      api.runtime.sendMessage({
         action: 'updateFloatingBallSetting',
         enabled: isEnabled
       }, () => {
         // 保存设置到 storage
-        chrome.storage.sync.set({ enableFloatingBall: isEnabled });
+        api.storage.sync.set({ enableFloatingBall: isEnabled });
       });
     });
   }
@@ -404,14 +430,14 @@ class SettingsManager {
     const hasSidepanelSettings = this.sidepanelOpenInNewTabCheckbox && this.sidepanelOpenInSidepanelCheckbox;
     
     // 加载链接打开方式设置
-    chrome.storage.sync.get(['openInNewTab'], (result) => {
+    api.storage.sync.get(['openInNewTab'], (result) => {
       this.openInNewTabCheckbox.checked = result.openInNewTab !== false;
     });
 
     // 监听设置变化
     this.openInNewTabCheckbox.addEventListener('change', () => {
       const isEnabled = this.openInNewTabCheckbox.checked;
-      chrome.storage.sync.set({ openInNewTab: isEnabled });
+      api.storage.sync.set({ openInNewTab: isEnabled });
     });
     
     // 如果侧边栏模式下的链接打开方式设置元素不存在，则跳过
@@ -421,7 +447,7 @@ class SettingsManager {
     }
     
     // 加载侧边栏模式下的链接打开方式设置
-    chrome.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
+    api.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
       // 默认在新标签页中打开
       this.sidepanelOpenInNewTabCheckbox.checked = result.sidepanelOpenInNewTab !== false;
       this.sidepanelOpenInSidepanelCheckbox.checked = result.sidepanelOpenInSidepanel === true;
@@ -430,30 +456,30 @@ class SettingsManager {
       if (this.sidepanelOpenInNewTabCheckbox.checked && this.sidepanelOpenInSidepanelCheckbox.checked) {
         // 如果两个都被选中，优先使用在新标签页中打开
         this.sidepanelOpenInSidepanelCheckbox.checked = false;
-        chrome.storage.sync.set({ sidepanelOpenInSidepanel: false });
+        api.storage.sync.set({ sidepanelOpenInSidepanel: false });
       }
     });
     
     // 监听侧边栏模式下的链接打开方式设置变化
     this.sidepanelOpenInNewTabCheckbox.addEventListener('change', () => {
       const isEnabled = this.sidepanelOpenInNewTabCheckbox.checked;
-      chrome.storage.sync.set({ sidepanelOpenInNewTab: isEnabled });
+      api.storage.sync.set({ sidepanelOpenInNewTab: isEnabled });
       
       // 如果启用了在新标签页中打开，则禁用在侧边栏内打开
       if (isEnabled && this.sidepanelOpenInSidepanelCheckbox.checked) {
         this.sidepanelOpenInSidepanelCheckbox.checked = false;
-        chrome.storage.sync.set({ sidepanelOpenInSidepanel: false });
+        api.storage.sync.set({ sidepanelOpenInSidepanel: false });
       }
     });
     
     this.sidepanelOpenInSidepanelCheckbox.addEventListener('change', () => {
       const isEnabled = this.sidepanelOpenInSidepanelCheckbox.checked;
-      chrome.storage.sync.set({ sidepanelOpenInSidepanel: isEnabled });
+      api.storage.sync.set({ sidepanelOpenInSidepanel: isEnabled });
       
       // 如果启用了在侧边栏内打开，则禁用在新标签页中打开
       if (isEnabled && this.sidepanelOpenInNewTabCheckbox.checked) {
         this.sidepanelOpenInNewTabCheckbox.checked = false;
-        chrome.storage.sync.set({ sidepanelOpenInNewTab: false });
+        api.storage.sync.set({ sidepanelOpenInNewTab: false });
       }
     });
   }
@@ -476,14 +502,14 @@ class SettingsManager {
     }
     
     // 加载保存的设置
-    chrome.storage.sync.get({ enableWheelSwitching: false }, (result) => {
+    api.storage.sync.get({ enableWheelSwitching: false }, (result) => {
       if (this.enableWheelSwitchingCheckbox) {
         this.enableWheelSwitchingCheckbox.checked = result.enableWheelSwitching;
         
         // 添加事件监听器
         this.enableWheelSwitchingCheckbox.addEventListener('change', () => {
           const isEnabled = this.enableWheelSwitchingCheckbox.checked;
-          chrome.storage.sync.set({ enableWheelSwitching: isEnabled });
+          api.storage.sync.set({ enableWheelSwitching: isEnabled });
           
           // 触发自定义事件，通知滚轮切换状态变化
           document.dispatchEvent(new CustomEvent('wheelSwitchingChanged', {
@@ -519,7 +545,7 @@ class SettingsManager {
     }
     
     // 从存储中获取保存的宽度值
-    chrome.storage.sync.get(['bookmarkWidth'], (result) => {
+    api.storage.sync.get(['bookmarkWidth'], (result) => {
       const savedWidth = result.bookmarkWidth || 190; // 默认190px
       this.widthSlider.value = savedWidth;
       this.widthValue.textContent = savedWidth;
@@ -538,7 +564,7 @@ class SettingsManager {
     // 监听滑块的鼠标释放事件
     this.widthSlider.addEventListener('mouseup', () => {
       // 保存设置
-      chrome.storage.sync.set({ bookmarkWidth: this.widthSlider.value });
+      api.storage.sync.set({ bookmarkWidth: this.widthSlider.value });
     });
         
     // 添加窗口大小改变的监听
@@ -560,7 +586,7 @@ class SettingsManager {
     }
     
     // 从存储中获取保存的高度值
-    chrome.storage.sync.get('bookmarkCardHeight', (result) => {
+    api.storage.sync.get('bookmarkCardHeight', (result) => {
       const savedHeight = result.bookmarkCardHeight || 48; // 默认值为48px
       
       // 设置滑块和显示值
@@ -581,7 +607,7 @@ class SettingsManager {
     // 监听滑块的鼠标释放事件
     this.heightSlider.addEventListener('mouseup', () => {
       // 保存设置
-      chrome.storage.sync.set({ bookmarkCardHeight: this.heightSlider.value });
+      api.storage.sync.set({ bookmarkCardHeight: this.heightSlider.value });
     });
   }
   
@@ -661,7 +687,7 @@ class SettingsManager {
     }
     
     // 从存储中获取保存的宽度值
-    chrome.storage.sync.get(['bookmarkContainerWidth'], (result) => {
+    api.storage.sync.get(['bookmarkContainerWidth'], (result) => {
       const savedWidth = result.bookmarkContainerWidth || 85; // 默认85%
       this.containerWidthSlider.value = savedWidth;
       this.containerWidthValue.textContent = savedWidth;
@@ -678,7 +704,7 @@ class SettingsManager {
     // 监听滑块的鼠标释放事件，保存设置
     this.containerWidthSlider.addEventListener('mouseup', () => {
       // 保存设置
-      chrome.storage.sync.set({ bookmarkContainerWidth: this.containerWidthSlider.value });
+      api.storage.sync.set({ bookmarkContainerWidth: this.containerWidthSlider.value });
     });
   }
 
@@ -703,7 +729,7 @@ class SettingsManager {
     this.showExtensionsLinkCheckbox = document.getElementById('show-extensions-link');
 
     // 加载保存的设置
-    chrome.storage.sync.get(
+    api.storage.sync.get(
       [
         'showSearchBox', 
         'showWelcomeMessage', 
@@ -748,7 +774,7 @@ class SettingsManager {
     // 监听设置变化
     this.showSearchBoxCheckbox.addEventListener('change', () => {
       const isVisible = this.showSearchBoxCheckbox.checked;
-      chrome.storage.sync.set({ showSearchBox: isVisible });
+      api.storage.sync.set({ showSearchBox: isVisible });
       
       // 立即应用设置
       const searchContainer = document.querySelector('.search-container');
@@ -764,7 +790,7 @@ class SettingsManager {
 
     this.showWelcomeMessageCheckbox.addEventListener('change', () => {
       const isVisible = this.showWelcomeMessageCheckbox.checked;
-      chrome.storage.sync.set({ showWelcomeMessage: isVisible });
+      api.storage.sync.set({ showWelcomeMessage: isVisible });
       
       // 立即应用设置
       const welcomeMessage = document.getElementById('welcome-message');
@@ -775,7 +801,7 @@ class SettingsManager {
 
     this.showFooterCheckbox.addEventListener('change', () => {
       const isVisible = this.showFooterCheckbox.checked;
-      chrome.storage.sync.set({ showFooter: isVisible });
+      api.storage.sync.set({ showFooter: isVisible });
       
       // 立即应用设置
       const footer = document.querySelector('footer');
@@ -787,25 +813,25 @@ class SettingsManager {
     // 添加事件监听器
     this.showHistoryLinkCheckbox.addEventListener('change', () => {
       const isVisible = this.showHistoryLinkCheckbox.checked;
-      chrome.storage.sync.set({ showHistoryLink: isVisible });
+      api.storage.sync.set({ showHistoryLink: isVisible });
       this.toggleElementVisibility('#history-link', isVisible);
     });
 
     this.showDownloadsLinkCheckbox.addEventListener('change', () => {
       const isVisible = this.showDownloadsLinkCheckbox.checked;
-      chrome.storage.sync.set({ showDownloadsLink: isVisible });
+      api.storage.sync.set({ showDownloadsLink: isVisible });
       this.toggleElementVisibility('#downloads-link', isVisible);
     });
 
     this.showPasswordsLinkCheckbox.addEventListener('change', () => {
       const isVisible = this.showPasswordsLinkCheckbox.checked;
-      chrome.storage.sync.set({ showPasswordsLink: isVisible });
+      api.storage.sync.set({ showPasswordsLink: isVisible });
       this.toggleElementVisibility('#passwords-link', isVisible);
     });
 
     this.showExtensionsLinkCheckbox.addEventListener('change', () => {
       const isVisible = this.showExtensionsLinkCheckbox.checked;
-      chrome.storage.sync.set({ showExtensionsLink: isVisible });
+      api.storage.sync.set({ showExtensionsLink: isVisible });
       this.toggleElementVisibility('#extensions-link', isVisible);
     });
   }
@@ -838,7 +864,7 @@ class SettingsManager {
     this.openSearchInNewTabCheckbox = document.getElementById('open-search-in-new-tab');
     
     // 加载搜索建议设置
-    chrome.storage.sync.get(
+    api.storage.sync.get(
       ['showHistorySuggestions', 'showBookmarkSuggestions', 'showSearchBox', 'openSearchInNewTab'], 
       (result) => {
         // 如果设置不存在(undefined)或者没有明确设置为 false,则默认为 true
@@ -848,16 +874,16 @@ class SettingsManager {
 
         // 初始化时如果是新用户(设置不存在),则保存默认值
         if (!('showHistorySuggestions' in result)) {
-          chrome.storage.sync.set({ showHistorySuggestions: true });
+          api.storage.sync.set({ showHistorySuggestions: true });
         }
         if (!('showBookmarkSuggestions' in result)) {
-          chrome.storage.sync.set({ showBookmarkSuggestions: true });
+          api.storage.sync.set({ showBookmarkSuggestions: true });
         }
         if (!('showSearchBox' in result)) {
-          chrome.storage.sync.set({ showSearchBox: false });
+          api.storage.sync.set({ showSearchBox: false });
         }
         if (!('openSearchInNewTab' in result)) {
-          chrome.storage.sync.set({ openSearchInNewTab: true });
+          api.storage.sync.set({ openSearchInNewTab: true });
         }
       }
     );
@@ -865,17 +891,17 @@ class SettingsManager {
     // 监听设置变化
     this.showHistorySuggestionsCheckbox.addEventListener('change', () => {
       const isEnabled = this.showHistorySuggestionsCheckbox.checked;
-      chrome.storage.sync.set({ showHistorySuggestions: isEnabled });
+      api.storage.sync.set({ showHistorySuggestions: isEnabled });
     });
 
     this.showBookmarkSuggestionsCheckbox.addEventListener('change', () => {
       const isEnabled = this.showBookmarkSuggestionsCheckbox.checked;
-      chrome.storage.sync.set({ showBookmarkSuggestions: isEnabled });
+      api.storage.sync.set({ showBookmarkSuggestions: isEnabled });
     });
     
     this.openSearchInNewTabCheckbox.addEventListener('change', () => {
       const isEnabled = this.openSearchInNewTabCheckbox.checked;
-      chrome.storage.sync.set({ openSearchInNewTab: isEnabled });
+      api.storage.sync.set({ openSearchInNewTab: isEnabled });
     });
   }
 
@@ -883,7 +909,7 @@ class SettingsManager {
     const shortcutItem = document.getElementById('configure-shortcuts');
     if (shortcutItem) {
       shortcutItem.addEventListener('click', () => {
-        chrome.tabs.create({
+        api.tabs.create({
           url: 'chrome://extensions/shortcuts'
         });
       });

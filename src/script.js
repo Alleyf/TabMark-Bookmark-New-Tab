@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 import { featureTips } from './feature-tips.js';
 import { initGestureNavigation } from './gesture-navigation.js';
 import { 
@@ -183,7 +209,7 @@ function openEditDialog(bookmark) {
     event.preventDefault();
     const newTitle = document.getElementById('edit-name').value;
     const newUrl = document.getElementById('edit-url').value;
-    chrome.bookmarks.update(bookmarkId, { title: newTitle, url: newUrl }, function () {
+    api.bookmarks.update(bookmarkId, { title: newTitle, url: newUrl }, function () {
       editDialog.style.display = 'none';
 
       // 更新特定的书签卡片
@@ -212,7 +238,7 @@ import { replaceIconsWithSvg, getIconHtml } from './icons.js';
 
 document.addEventListener('DOMContentLoaded', function () {
   // 应用保存的书签卡片高度设置
-  chrome.storage.sync.get('bookmarkCardHeight', (result) => {
+  api.storage.sync.get('bookmarkCardHeight', (result) => {
     if (result.bookmarkCardHeight) {
       // 创建或更新自定义样式
       let styleElement = document.getElementById('custom-card-height');
@@ -567,9 +593,9 @@ function initVirtualScroll() {
   // 更新书签显示
   window.updateBookmarksDisplay = function(parentId, movedItemId, newIndex) {
     return new Promise((resolve, reject) => {
-      chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+      api.bookmarks.getChildren(parentId, (bookmarks) => {
+        if (api.runtime.lastError) {
+          reject(api.runtime.lastError);
           return;
         }
 
@@ -731,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // 初始化快捷链接显示状态
-  chrome.storage.sync.get(['enableQuickLinks'], function(result) {
+  api.storage.sync.get(['enableQuickLinks'], function(result) {
     const quickLinksWrapper = document.querySelector('.quick-links-wrapper');
     if (quickLinksWrapper) {
       quickLinksWrapper.style.display = result.enableQuickLinks !== false ? 'flex' : 'none';
@@ -828,7 +854,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // 应用保存的书签宽度设置
-  chrome.storage.sync.get(['bookmarkWidth'], (result) => {
+  api.storage.sync.get(['bookmarkWidth'], (result) => {
     const savedWidth = result.bookmarkWidth || 190;
     const bookmarksList = document.getElementById('bookmarks-list');
     if (bookmarksList) {
@@ -837,7 +863,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // 应用保存的书签容器宽度设置
-  chrome.storage.sync.get(['bookmarkContainerWidth'], (result) => {
+  api.storage.sync.get(['bookmarkContainerWidth'], (result) => {
     const savedWidth = result.bookmarkContainerWidth || 85; // 默认85%
     const bookmarksContainer = document.querySelector('.bookmarks-container');
     if (bookmarksContainer) {
@@ -846,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // 应用保存的界面元素显示设置
-  chrome.storage.sync.get(
+  api.storage.sync.get(
     [
       'showSearchBox', 
       'showWelcomeMessage', 
@@ -967,7 +993,7 @@ function updateBookmarkCards() {
   const defaultBookmarkId = localStorage.getItem('defaultBookmarkId');
   const parentId = defaultBookmarkId || bookmarksList.dataset.parentId || '1';
 
-  chrome.bookmarks.getChildren(parentId, function (bookmarks) {
+  api.bookmarks.getChildren(parentId, function (bookmarks) {
     displayBookmarks({ id: parentId, children: bookmarks });
 
     // 在显示书签后更新默认书签指示器
@@ -1032,9 +1058,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-        if (chrome.runtime.lastError) {
-          throw chrome.runtime.lastError;
+      api.bookmarks.getChildren(parentId, (bookmarks) => {
+        if (api.runtime.lastError) {
+          throw api.runtime.lastError;
         }
         
         // 缓存新数据
@@ -1090,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const cached = bookmarksCache.get(parentId);
     if (!cached) return;
     
-    chrome.bookmarks.getChildren(parentId, (bookmarks) => {
+    api.bookmarks.getChildren(parentId, (bookmarks) => {
       const chromeOrder = bookmarks.map(b => b.id);
       const cachedOrder = cached.bookmarks.map(b => b.id);
       
@@ -1257,11 +1283,11 @@ async function waitForFirstCategory(attemptsLeft = 5) {
     }
 
     // 2. 尝试获取上次访问的文件夹
-    const { lastViewedFolder } = await chrome.storage.local.get('lastViewedFolder');
+    const { lastViewedFolder } = await api.storage.local.get('lastViewedFolder');
     
     if (lastViewedFolder) {
       try {
-        const results = await chrome.bookmarks.get(lastViewedFolder);
+        const results = await api.bookmarks.get(lastViewedFolder);
         if (results && results.length > 0) {
           await updateBookmarksDisplay(lastViewedFolder);
           updateFolderName(lastViewedFolder);
@@ -1276,11 +1302,11 @@ async function waitForFirstCategory(attemptsLeft = 5) {
     }
 
     // 3. 尝试使用用户设置的默认文件夹
-    const { defaultFolders } = await chrome.storage.sync.get('defaultFolders');
+    const { defaultFolders } = await api.storage.sync.get('defaultFolders');
     if (defaultFolders?.items?.length > 0) {
       const defaultFolderId = defaultFolders.items[0].id;
       try {
-        const results = await chrome.bookmarks.get(defaultFolderId);
+        const results = await api.bookmarks.get(defaultFolderId);
         if (results && results.length > 0) {
           await updateBookmarksDisplay(defaultFolderId);
           updateFolderName(defaultFolderId);
@@ -1330,7 +1356,7 @@ async function initDefaultFoldersTabs() {
   }
 
   // 获取默认文件夹列表
-  const data = await chrome.storage.sync.get(['defaultFolders', 'lastViewedFolder']);
+  const data = await api.storage.sync.get(['defaultFolders', 'lastViewedFolder']);
   let defaultFolders = data.defaultFolders?.items || [];
   const lastViewedFolder = data.lastViewedFolder;
   
@@ -1354,7 +1380,7 @@ async function initDefaultFoldersTabs() {
   }
 
   // 只调用一次更新书签树
-  chrome.bookmarks.getTree(function (nodes) {
+  api.bookmarks.getTree(function (nodes) {
     bookmarkTreeNodes = nodes;
     displayBookmarkCategories(bookmarkTreeNodes[0].children, 0, null, '1');
   });
@@ -1426,7 +1452,7 @@ function initWheelSwitching() {
       isProcessing = true;
 
       try {
-        const data = await chrome.storage.sync.get('defaultFolders');
+        const data = await api.storage.sync.get('defaultFolders');
         const defaultFolders = data.defaultFolders?.items || [];
         if (defaultFolders.length <= 1) {
           isProcessing = false;
@@ -1502,7 +1528,7 @@ function initWheelSwitching() {
   };
   
   // 检查设置并初始化
-  chrome.storage.sync.get({ enableWheelSwitching: false }, (result) => {
+  api.storage.sync.get({ enableWheelSwitching: false }, (result) => {
     isEnabled = result.enableWheelSwitching;
     updateWheelListener(isEnabled);
   });
@@ -1520,7 +1546,7 @@ async function switchToFolder(folderId) {
     console.log('Switching to folder:', folderId);
     
     // 验证文件夹是否存在
-    const results = await chrome.bookmarks.get(folderId);
+    const results = await api.bookmarks.get(folderId);
     if (!results || results.length === 0) {
       throw new Error('Folder not found');
     }
@@ -1541,7 +1567,7 @@ async function switchToFolder(folderId) {
     ]);
 
     // 保存最后访问的文件夹
-    await chrome.storage.local.set({ 
+    await api.storage.local.set({ 
       lastViewedFolder: folderId,
       lastViewedTime: Date.now()
     });
@@ -1568,9 +1594,9 @@ function updateBookmarksDisplay(parentId, movedItemId, newIndex) {
     }
 
     // 如果没有缓存或是移动操作，从 Chrome API 获取数据
-    chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
+    api.bookmarks.getChildren(parentId, (bookmarks) => {
+      if (api.runtime.lastError) {
+        reject(api.runtime.lastError);
         return;
       }
 
@@ -1598,7 +1624,7 @@ function updateBookmarksDisplay(parentId, movedItemId, newIndex) {
 // 获取书栏的本地化名称
 function getBookmarksBarName() {
   return new Promise((resolve) => {
-    chrome.bookmarks.getTree(function(tree) {
+    api.bookmarks.getTree(function(tree) {
       if (tree && tree[0] && tree[0].children) {
         const bookmarksBar = tree[0].children.find(child => child.id === '1');
         if (bookmarksBar) {
@@ -1617,9 +1643,9 @@ function getBookmarkPath(bookmarkId) {
   return new Promise((resolve, reject) => {
     getBookmarksBarName().then(bookmarksBarName => {
       function getParentRecursive(id, path = []) {
-        chrome.bookmarks.get(id, function(results) {
-          if (chrome.runtime.lastError) {
-            reject(chrome.runtime.lastError);
+        api.bookmarks.get(id, function(results) {
+          if (api.runtime.lastError) {
+            reject(api.runtime.lastError);
             return;
           }
           if (results && results[0]) {
@@ -1698,7 +1724,7 @@ function navigateToPath(path) {
 
     // 如果路径不是从书签栏开始，我们需要找到正确的起始点
     if (pathParts[0] !== bookmarksBarName) {
-      chrome.bookmarks.search({title: pathParts[0]}, function(results) {
+      api.bookmarks.search({title: pathParts[0]}, function(results) {
         if (results.length > 0) {
           currentId = results[0].id;
         }
@@ -1715,7 +1741,7 @@ function navigateToPath(path) {
         return;
       }
 
-      chrome.bookmarks.getChildren(currentId, function(children) {
+      api.bookmarks.getChildren(currentId, function(children) {
         const matchingChild = children.find(child => child.title === pathParts[index]);
         if (matchingChild) {
           currentId = matchingChild.id;
@@ -1927,7 +1953,7 @@ function createBookmarkCard(bookmark, index) {
       // 处理内部链接
       if (isInternalUrl) {
         console.log('[Bookmark Click] Opening internal URL');
-        chrome.tabs.create({
+        api.tabs.create({
           url: bookmark.url,
           active: true
         }).then(tab => {
@@ -1942,7 +1968,7 @@ function createBookmarkCard(bookmark, index) {
       if (isSidePanel) {
         console.log('[Bookmark Click] Opening in Side Panel mode');
         // 获取侧边栏模式下的链接打开方式设置
-        chrome.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
+        api.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
           // 默认在新标签页中打开
           const openInNewTab = result.sidepanelOpenInNewTab !== false;
           const openInSidepanel = result.sidepanelOpenInSidepanel === true;
@@ -1987,7 +2013,7 @@ function createBookmarkCard(bookmark, index) {
                   backButton.style.display = 'flex';
                 } else {
                   console.error('[Bookmark Click] Side panel elements not found, falling back to new tab');
-                  chrome.tabs.create({
+                  api.tabs.create({
                     url: bookmark.url,
                     active: true
                   });
@@ -2002,14 +2028,14 @@ function createBookmarkCard(bookmark, index) {
             } catch (error) {
               console.error('[Bookmark Click] Error using SidePanelManager:', error);
               // 出错时回退到在新标签页中打开
-              chrome.tabs.create({
+              api.tabs.create({
                 url: bookmark.url,
                 active: true
               });
             }
           } else if (openInNewTab) {
             // 在新标签页中打开
-            chrome.tabs.create({
+            api.tabs.create({
               url: bookmark.url,
               active: true
             }).then(tab => {
@@ -2021,7 +2047,7 @@ function createBookmarkCard(bookmark, index) {
         });
       } else {
         console.log('[Bookmark Click] Opening in Main Window mode');
-        chrome.storage.sync.get(['openInNewTab'], (result) => {
+        api.storage.sync.get(['openInNewTab'], (result) => {
           if (result.openInNewTab !== false) {
             window.open(bookmark.url, '_blank');
           } else {
@@ -2728,9 +2754,9 @@ function deleteBookmark(bookmarkId, bookmarkTitle) {
   }
 
   // 然后调用 Chrome API 删除书签
-  chrome.bookmarks.remove(bookmarkId, function() {
-    if (chrome.runtime.lastError) {
-      console.error('Error deleting bookmark:', chrome.runtime.lastError);
+  api.bookmarks.remove(bookmarkId, function() {
+    if (api.runtime.lastError) {
+      console.error('Error deleting bookmark:', api.runtime.lastError);
       Utilities.showToast(getLocalizedMessage('deleteBookmarkError'));
       
       // 如果删除失败，恢复书签卡片
@@ -2750,8 +2776,8 @@ function deleteBookmark(bookmarkId, bookmarkTitle) {
       if (parentId) {
         // 不需要完全刷新，因为我们已经从界面上移除了书签卡片
         // 但我们需要更新缓存和排序
-        chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-          if (!chrome.runtime.lastError) {
+        api.bookmarks.getChildren(parentId, (bookmarks) => {
+          if (!api.runtime.lastError) {
             bookmarkOrderCache[parentId] = bookmarks.map(b => b.id);
           }
         });
@@ -2993,10 +3019,10 @@ function setupSortable() {
 
 function moveBookmark(itemId, newParentId, newIndex) {
   return new Promise((resolve, reject) => {
-    chrome.bookmarks.move(itemId, { index: newIndex }, (result) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error moving bookmark:', chrome.runtime.lastError);
-        reject(chrome.runtime.lastError);
+    api.bookmarks.move(itemId, { index: newIndex }, (result) => {
+      if (api.runtime.lastError) {
+        console.error('Error moving bookmark:', api.runtime.lastError);
+        reject(api.runtime.lastError);
       } else {
         console.log(`Bookmark ${itemId} moved to index ${result.index}`);
         updateAffectedBookmarks(newParentId, itemId, result.index)
@@ -3149,8 +3175,8 @@ function getFolderBookmarkCount(folderId) {
       });
     }
 
-    chrome.bookmarks.getChildren(folderId, (children) => {
-      if (chrome.runtime.lastError) {
+    api.bookmarks.getChildren(folderId, (children) => {
+      if (api.runtime.lastError) {
         resolve(0);
         return;
       }
@@ -3163,7 +3189,7 @@ function getFolderBookmarkCount(folderId) {
 async function isDefaultFolder(folderId) {
   if (!folderId) return false;
 
-  const data = await chrome.storage.sync.get('defaultFolders');
+  const data = await api.storage.sync.get('defaultFolders');
   const defaultFolders = data.defaultFolders?.items || [];
   return defaultFolders.some(folder => folder.id === folderId);
 }
@@ -3200,8 +3226,8 @@ async function createMenuItems(menu) {
   let isDefault = false;
   if (currentBookmarkFolder?.dataset?.id) {
     try {
-      // 确保在获取状态前等待 chrome.storage.sync.get 完成
-      const data = await chrome.storage.sync.get('defaultFolders');
+      // 确保在获取状态前等待 api.storage.sync.get 完成
+      const data = await api.storage.sync.get('defaultFolders');
       const defaultFolders = data.defaultFolders?.items || [];
       isDefault = defaultFolders.some(folder => folder.id === currentBookmarkFolder.dataset.id);
       
@@ -3226,15 +3252,15 @@ async function createMenuItems(menu) {
           const folderId = currentBookmarkFolder.dataset.id;
           const folderTitle = currentBookmarkFolder.querySelector('.card-title').textContent;
           
-          chrome.bookmarks.getChildren(folderId, (bookmarks) => {
+          api.bookmarks.getChildren(folderId, (bookmarks) => {
             // 过滤出有效的书签URL
             const validUrls = bookmarks
               .filter(bookmark => bookmark.url)
               .map(bookmark => bookmark.url);
 
             if (validUrls.length > 0) {
-              // 使用 chrome.runtime.sendMessage 发送消息给后台脚本
-              chrome.runtime.sendMessage({
+              // 使用 api.runtime.sendMessage 发送消息给后台脚本
+              api.runtime.sendMessage({
                 action: 'openMultipleTabsAndGroup',
                 urls: validUrls,
                 groupName: folderTitle // 使用文件夹名称作为标签组名称
@@ -3260,7 +3286,7 @@ async function createMenuItems(menu) {
         
         showConfirmDialog(chrome.i18n.getMessage("confirmDeleteFolder", [`<strong>${folderTitle}</strong>`]), async () => {
           try {
-            await chrome.bookmarks.removeTree(folderId);
+            await api.bookmarks.removeTree(folderId);
             
             // 1. 立即从 UI 中移除文件夹卡片
             const folderCard = document.querySelector(`.bookmark-folder[data-id="${folderId}"]`);
@@ -3329,7 +3355,7 @@ async function createMenuItems(menu) {
         await toggleDefaultFolder(folder);
         
         // 重新获取当前状态
-        const data = await chrome.storage.sync.get('defaultFolders');
+        const data = await api.storage.sync.get('defaultFolders');
         const defaultFolders = data.defaultFolders?.items || [];
         const newIsDefault = defaultFolders.some(f => f.id === folder.dataset.id);
         
@@ -3422,7 +3448,7 @@ function openEditBookmarkFolderDialog(folderElement) {
   editCategoryForm.onsubmit = function (event) {
     event.preventDefault();
     const newTitle = editCategoryNameInput.value;
-    chrome.bookmarks.update(folderId, { title: newTitle }, function () {
+    api.bookmarks.update(folderId, { title: newTitle }, function () {
       console.log('Bookmark updated:', folderId, newTitle);
       updateCategoryUI(folderId, newTitle);
       updateFolderName(folderId);
@@ -3511,7 +3537,7 @@ function setDefaultBookmark(bookmarkId) {
   updateSidebarDefaultBookmarkIndicator();
 
   // 通知背景脚本更新默认书签ID
-  chrome.runtime.sendMessage({ action: 'setDefaultBookmarkId', defaultBookmarkId: bookmarkId }, function (response) {
+  api.runtime.sendMessage({ action: 'setDefaultBookmarkId', defaultBookmarkId: bookmarkId }, function (response) {
     if (response && response.success) {
       console.log('Background script has updated the defaultBookmarkId');
     }
@@ -3547,7 +3573,7 @@ function syncBookmarkOrder(parentId) {
   if (!cached) return;
   
   
-  chrome.bookmarks.getChildren(parentId, (bookmarks) => {
+  api.bookmarks.getChildren(parentId, (bookmarks) => {
     const chromeOrder = bookmarks.map(b => b.id);
     const cachedOrder = cached.bookmarks.map(b => b.id);
     
@@ -3615,10 +3641,10 @@ function setupSpecialLinks() {
       }
 
       try {
-        // 直接使用 chrome.tabs.create 打开新标签页
-        chrome.tabs.create({ url: chromeUrl }, (tab) => {
-          if (chrome.runtime.lastError) {
-            console.error('Failed to open tab:', chrome.runtime.lastError);
+        // 直接使用 api.tabs.create 打开新标签页
+        api.tabs.create({ url: chromeUrl }, (tab) => {
+          if (api.runtime.lastError) {
+            console.error('Failed to open tab:', api.runtime.lastError);
           }
         });
       } catch (error) {
@@ -3815,7 +3841,7 @@ document.addEventListener('DOMContentLoaded', function () {
       event.preventDefault();
       const newTitle = document.getElementById('edit-name').value;
       const newUrl = document.getElementById('edit-url').value;
-      chrome.bookmarks.update(bookmarkId, { title: newTitle, url: newUrl }, function () {
+      api.bookmarks.update(bookmarkId, { title: newTitle, url: newUrl }, function () {
         editDialog.style.display = 'none';
 
         // 更新特定的书签卡片
@@ -3921,7 +3947,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function getFavicon(url, callback) {
     const domain = new URL(url).hostname;
 
-    chrome.bookmarks.search({ url: url }, function (results) {
+    api.bookmarks.search({ url: url }, function (results) {
       if (results && results.length > 0) {
         const faviconURL = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
         const img = new Image();
@@ -3964,7 +3990,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function cacheFavicon(domain, faviconUrl) {
     const data = {};
     data[domain] = faviconUrl;
-    chrome.storage.local.set(data);
+    api.storage.local.set(data);
   }
 
   let currentCategory = null;
@@ -3977,7 +4003,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (currentDepth > maxDepth) return 0;
 
       return new Promise((resolve) => {
-        chrome.bookmarks.getChildren(id, async (items) => {
+        api.bookmarks.getChildren(id, async (items) => {
           let localCount = 0;
 
           for (const item of items) {
@@ -4007,7 +4033,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (batch.length === 0) {
           // 所有标签页创建完成后，创建标签组
           if (tabIds.length > 1) {
-            chrome.tabs.group({ tabIds }, (groupId) => {
+            api.tabs.group({ tabIds }, (groupId) => {
               chrome.tabGroups.update(groupId, {
                 title: groupName,
                 color: 'cyan'
@@ -4023,7 +4049,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 创建这一批的标签页
         Promise.all(batch.map(url =>
           new Promise((resolve) => {
-            chrome.tabs.create({ url, active: false }, (tab) => {
+            api.tabs.create({ url, active: false }, (tab) => {
               if (tab) tabIds.push(tab.id);
               resolve();
             });
@@ -4049,7 +4075,7 @@ document.addEventListener('DOMContentLoaded', function () {
       let isDefault = false;
       if (currentCategory?.dataset?.id) {
         try {
-          const data = await chrome.storage.sync.get('defaultFolders');
+          const data = await api.storage.sync.get('defaultFolders');
           const defaultFolders = data.defaultFolders?.items || [];
           isDefault = defaultFolders.some(folder => folder.id === currentCategory.dataset.id);
         } catch (error) {
@@ -4069,7 +4095,7 @@ document.addEventListener('DOMContentLoaded', function () {
               // 递归获取所有书签 URL 的函数
               const getAllBookmarkUrls = async (folderId) => {
                 return new Promise((resolve) => {
-                  chrome.bookmarks.getChildren(folderId, async (items) => {
+                  api.bookmarks.getChildren(folderId, async (items) => {
                     let urls = [];
                     for (const item of items) {
                       if (item.url) {
@@ -4089,7 +4115,7 @@ document.addEventListener('DOMContentLoaded', function () {
               getAllBookmarkUrls(folderId).then(validUrls => {
                 if (validUrls.length > 0) {
                   // 使用 background.js 中的优化函数
-                  chrome.runtime.sendMessage({
+                  api.runtime.sendMessage({
                     action: 'openMultipleTabsAndGroup',
                     urls: validUrls,
                     groupName: folderTitle
@@ -4153,7 +4179,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const categoryId = currentCategory.dataset.id;
                 const categoryTitle = currentCategory.dataset.title;
                 showConfirmDialog(chrome.i18n.getMessage("confirmDeleteFolder", [`<strong>${categoryTitle}</strong>`]), () => {
-                  chrome.bookmarks.removeTree(categoryId, function () {
+                  api.bookmarks.removeTree(categoryId, function () {
                     currentCategory.remove();
                     Utilities.showToast(getLocalizedMessage('categoryDeleted'));
                   });
@@ -4220,7 +4246,7 @@ document.addEventListener('DOMContentLoaded', function () {
       event.preventDefault();
       const updatedTitle = editCategoryNameInput.value;
 
-      chrome.bookmarks.update(categoryId, {
+      api.bookmarks.update(categoryId, {
         title: updatedTitle
       }, function (result) {
         updateCategoryUI(categoryElement, updatedTitle);
@@ -4289,9 +4315,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // 如果没有缓存或是移动操作，从 Chrome API 获取数据
-      chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+      api.bookmarks.getChildren(parentId, (bookmarks) => {
+        if (api.runtime.lastError) {
+          reject(api.runtime.lastError);
           return;
         }
 
@@ -4533,7 +4559,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       // 根据设置决定打开方式
-      chrome.storage.sync.get('openSearchInNewTab', (result) => {
+      api.storage.sync.get('openSearchInNewTab', (result) => {
         const openInNewTab = result.openSearchInNewTab !== false; // 默认为 true
         console.log('[Search] Opening URL:', url, 'in new tab:', openInNewTab);
         
@@ -4626,7 +4652,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   async function getRecentHistory(limit = 100, maxPerDomain = 5) {
     return new Promise((resolve) => {
-      chrome.history.search({ text: '', maxResults: limit * 20 }, (historyItems) => {
+      api.history.search({ text: '', maxResults: limit * 20 }, (historyItems) => {
         const now = Date.now();
         const domainCounts = {};
         const uniqueItems = new Map();
@@ -4687,7 +4713,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function searchHistory(query, maxResults = 200) {
     return new Promise((resolve) => {
       const startTime = new Date().getTime() - (30 * 24 * 60 * 60 * 1000); // 搜索最近30天的历史
-      chrome.history.search(
+      api.history.search(
         { 
           text: query, 
           startTime: startTime,
@@ -4713,7 +4739,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 获取设置
     const settings = await new Promise(resolve => {
-      chrome.storage.sync.get(
+      api.storage.sync.get(
         ['showHistorySuggestions', 'showBookmarkSuggestions'],
         resolve
       );
@@ -4736,7 +4762,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let bookmarkSuggestions = [];
     if (settings.showBookmarkSuggestions !== false) {
       const bookmarkItems = await new Promise(resolve => {
-        chrome.bookmarks.search(query, resolve);
+        api.bookmarks.search(query, resolve);
       });
       bookmarkSuggestions = bookmarkItems.slice(0, maxBookmarkResults).map(item => ({
         text: item.title,
@@ -4937,9 +4963,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       // 如果没有缓存或是移动操作，从 Chrome API 获取数据
-      chrome.bookmarks.getChildren(parentId, (bookmarks) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+      api.bookmarks.getChildren(parentId, (bookmarks) => {
+        if (api.runtime.lastError) {
+          reject(api.runtime.lastError);
           return;
         }
 
@@ -5114,7 +5140,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   async function getRecentHistory(limit = 100, maxPerDomain = 5) {
     return new Promise((resolve) => {
-      chrome.history.search({ text: '', maxResults: limit * 20 }, (historyItems) => {
+      api.history.search({ text: '', maxResults: limit * 20 }, (historyItems) => {
         const now = Date.now();
         const domainCounts = {};
         const uniqueItems = new Map();
@@ -5165,7 +5191,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function searchHistory(query, maxResults = 200) {
     return new Promise((resolve) => {
       const startTime = new Date().getTime() - (30 * 24 * 60 * 60 * 1000); // 搜索最近30天的历史
-      chrome.history.search(
+      api.history.search(
         { 
           text: query, 
           startTime: startTime,
@@ -5191,7 +5217,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 获取设置
     const settings = await new Promise(resolve => {
-      chrome.storage.sync.get(
+      api.storage.sync.get(
         ['showHistorySuggestions', 'showBookmarkSuggestions'],
         resolve
       );
@@ -5214,7 +5240,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let bookmarkSuggestions = [];
     if (settings.showBookmarkSuggestions !== false) {
       const bookmarkItems = await new Promise(resolve => {
-        chrome.bookmarks.search(query, resolve);
+        api.bookmarks.search(query, resolve);
       });
       bookmarkSuggestions = bookmarkItems.slice(0, maxBookmarkResults).map(item => ({
         text: item.title,
@@ -5472,7 +5498,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // 获取用户行为数据
   async function getUserBehavior() {
     return new Promise((resolve) => {
-      chrome.storage.local.get(USER_BEHAVIOR_KEY, (result) => {
+      api.storage.local.get(USER_BEHAVIOR_KEY, (result) => {
         const behavior = result[USER_BEHAVIOR_KEY] || {};
         resolve(behavior); // 直接返回行为数据，不进行清理
       });
@@ -5501,7 +5527,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     return new Promise((resolve) => {
-      chrome.storage.local.set({ [USER_BEHAVIOR_KEY]: behavior }, resolve); // 直接保存行为数据
+      api.storage.local.set({ [USER_BEHAVIOR_KEY]: behavior }, resolve); // 直接保存行为数据
     });
   }
 
@@ -5663,7 +5689,7 @@ document.addEventListener('DOMContentLoaded', function () {
     li.addEventListener('click', async () => {
       if (suggestion.url) {
         // 根据设置决定打开方式
-        chrome.storage.sync.get('openSearchInNewTab', (result) => {
+        api.storage.sync.get('openSearchInNewTab', (result) => {
           const openInNewTab = result.openSearchInNewTab !== false; // 默认为 true
           
           if (openInNewTab) {
@@ -5742,13 +5768,13 @@ document.addEventListener('DOMContentLoaded', function () {
   function cacheFavicon(domain, faviconUrl) {
     const data = {};
     data[domain] = faviconUrl;
-    chrome.storage.local.set(data);
+    api.storage.local.set(data);
   }
 
   async function showDefaultSuggestions() {
     // 首先检查设置
     const settings = await new Promise(resolve => {
-      chrome.storage.sync.get(
+      api.storage.sync.get(
         ['showHistorySuggestions', 'showBookmarkSuggestions'],
         resolve
       );
@@ -5776,7 +5802,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // 如果启用了书签建议，可以在这里添加最近的书签
     if (settings.showBookmarkSuggestions !== false) {
       const recentBookmarks = await new Promise(resolve => {
-        chrome.bookmarks.getRecent(10, resolve);
+        api.bookmarks.getRecent(10, resolve);
       });
       
       suggestions = suggestions.concat(recentBookmarks.map(item => ({
@@ -5965,7 +5991,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (urls.length > 0) {
       window.lastSearchTrigger = 'cmdCtrlEnter';
 
-      chrome.runtime.sendMessage({
+      api.runtime.sendMessage({
         action: 'openMultipleTabsAndGroup',
         urls: urls,
         groupName: query
@@ -6026,7 +6052,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 添加一个全局函数用于更新快捷链接显示状态
   function updateQuickLinksVisibility() {
-    chrome.storage.sync.get(['enableQuickLinks'], function(result) {
+    api.storage.sync.get(['enableQuickLinks'], function(result) {
       const quickLinksWrapper = document.querySelector('.quick-links-wrapper');
       if (quickLinksWrapper) {
         quickLinksWrapper.style.display = result.enableQuickLinks !== false ? 'flex' : 'none';
@@ -6035,7 +6061,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // 监听存储变化
-  chrome.storage.onChanged.addListener(function(changes, namespace) {
+  api.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'sync' && changes.enableQuickLinks) {
       updateQuickLinksVisibility();
     }
@@ -6081,7 +6107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     try {
-        const data = await chrome.storage.sync.get('defaultFolders');
+        const data = await api.storage.sync.get('defaultFolders');
         let defaultFolders = data.defaultFolders?.items || [];
         const isDefault = defaultFolders.some(f => f.id === folderId);
 
@@ -6105,7 +6131,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast(chrome.i18n.getMessage("addedToDefaultFolders", [folderName]));
         }
 
-        await chrome.storage.sync.set({
+        await api.storage.sync.set({
             defaultFolders: {
                 items: defaultFolders,
                 lastUpdated: Date.now()

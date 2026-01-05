@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 (function () {
   function getSelectedText() {
     const selection = window.getSelection();
@@ -25,8 +51,8 @@
 
   function fetchBookmarks() {
     return new Promise((resolve, reject) => {
-      if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ action: 'fetchBookmarks' }, (response) => {
+      if (chrome && chrome.runtime && api.runtime.sendMessage) {
+        api.runtime.sendMessage({ action: 'fetchBookmarks' }, (response) => {
           if (response && response.bookmarks) {
             resolve(response.bookmarks);
           } else {
@@ -34,16 +60,14 @@
           }
         });
       } else {
-        reject(new Error('chrome.runtime.sendMessage is not available'));
+        reject(new Error('api.runtime.sendMessage is not available'));
       }
     });
   }
 
   function faviconURL(bookmarkUrl) {
-    const url = new URL(chrome.runtime.getURL("/_favicon/"));
-    url.searchParams.set("pageUrl", bookmarkUrl);
-    url.searchParams.set("size", "32");
-    return url.toString();
+    // 使用跨浏览器兼容的favicon获取方法
+    return createFaviconURL(bookmarkUrl);
   }
 
   function createBookmarkElement(bookmark) {
@@ -84,8 +108,8 @@
       bookmarkListContainer.innerHTML = '';
 
       // 2. 获取默认文件夹列表
-      const { defaultFolders } = await chrome.storage.sync.get('defaultFolders');
-      const { lastViewedFolder } = await chrome.storage.local.get('lastViewedFolder');
+      const { defaultFolders } = await api.storage.sync.get('defaultFolders');
+      const { lastViewedFolder } = await api.storage.local.get('lastViewedFolder');
       
       let folderToShow = null;
       let folderContents = [];
@@ -104,7 +128,7 @@
         
         try {
           // 通过消息传递获取文件夹信息
-          const response = await chrome.runtime.sendMessage({ 
+          const response = await api.runtime.sendMessage({ 
             action: 'getBookmarkFolder', 
             folderId: folderToActivate 
           });
@@ -124,7 +148,7 @@
       if (!folderToShow) {
         try {
           // 通过消息传递获取根文件夹信息
-          const response = await chrome.runtime.sendMessage({ 
+          const response = await api.runtime.sendMessage({ 
             action: 'getBookmarkFolder', 
             folderId: '1' 
           });
@@ -195,7 +219,7 @@
 
   function getDefaultBookmarkId() {
     return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ action: 'getDefaultBookmarkId' }, (response) => {
+      api.runtime.sendMessage({ action: 'getDefaultBookmarkId' }, (response) => {
         if (response && response.defaultBookmarkId !== undefined) {
           resolve(response.defaultBookmarkId);
         } else {
@@ -215,7 +239,7 @@
   const floatingButton = document.createElement('div');
   floatingButton.id = 'floating-button';
   floatingButton.innerHTML = `
-    <img src="${chrome.runtime.getURL('../images/icon-48.png')}" alt="icon" class="floating-button-icon">
+    <img src="${api.runtime.getURL('../images/icon-48.png')}" alt="icon" class="floating-button-icon">
     <div class="floating-tooltip">
       <div class="tooltip-content">
         <div class="tooltip-row">
@@ -250,7 +274,7 @@
   const closeButton = floatingButton.querySelector('.tooltip-close');
   closeButton?.addEventListener('click', (e) => {
     e.stopPropagation(); // 阻止事件冒泡
-    chrome.storage.local.set({ 'hideFloatingTooltip': true }, () => {
+    api.storage.local.set({ 'hideFloatingTooltip': true }, () => {
       const tooltip = floatingButton.querySelector('.floating-tooltip');
       if (tooltip) {
         tooltip.style.display = 'none';
@@ -259,7 +283,7 @@
   });
 
   // 检查是否需要显示提示
-  chrome.storage.local.get(['hideFloatingTooltip'], (result) => {
+  api.storage.local.get(['hideFloatingTooltip'], (result) => {
     if (result.hideFloatingTooltip) {
       const tooltip = floatingButton.querySelector('.floating-tooltip');
       if (tooltip) {
@@ -296,39 +320,39 @@
   searchSwitcher.innerHTML = `
 <ul>
   <li data-url="https://www.google.com/search?q=" data-shortcut="1" ${defaultSearchEngine === 'google' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/google-logo.svg')}" alt="Google" class="search-icon">
+    <img src="${api.runtime.getURL('../images/google-logo.svg')}" alt="Google" class="search-icon">
     <span>Google <span class="shortcut-key">Alt+1</span></span>
   </li>
   <li data-url="https://www.bing.com/search?q=" data-shortcut="2" ${defaultSearchEngine === 'bing' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/bing-logo.png')}" alt="Bing" class="search-icon">
+    <img src="${api.runtime.getURL('../images/bing-logo.png')}" alt="Bing" class="search-icon">
     <span>Bing <span class="shortcut-key">Alt+2</span></span>
   </li>
   <li data-url="https://www.baidu.com/s?wd=" data-shortcut="3" ${defaultSearchEngine === 'baidu' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/baidu-logo.svg')}" alt="Baidu" class="search-icon">
+    <img src="${api.runtime.getURL('../images/baidu-logo.svg')}" alt="Baidu" class="search-icon">
     <span>百度 <span class="shortcut-key">Alt+3</span></span>
   </li>
   <li data-url="https://kimi.moonshot.cn/?q=" data-shortcut="4" ${defaultSearchEngine === 'kimi' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/kimi-logo.svg')}" alt="Kimi" class="search-icon">
+    <img src="${api.runtime.getURL('../images/kimi-logo.svg')}" alt="Kimi" class="search-icon">
     <span>Kimi <span class="shortcut-key">Alt+4</span></span>
   </li>
   <li data-url="https://felo.ai/search?q=" data-shortcut="5" ${defaultSearchEngine === 'felo' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/felo-logo.svg')}" alt="Felo" class="search-icon">
+    <img src="${api.runtime.getURL('../images/felo-logo.svg')}" alt="Felo" class="search-icon">
     <span>Felo <span class="shortcut-key">Alt+5</span></span>
   </li>
   <li data-url="https://metaso.cn/?q=" data-shortcut="6" ${defaultSearchEngine === 'metaso' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/sider-icon/metaso-logo.png')}" alt="Metaso" class="search-icon">
+    <img src="${api.runtime.getURL('../images/sider-icon/metaso-logo.png')}" alt="Metaso" class="search-icon">
     <span>Metaso <span class="shortcut-key">Alt+6</span></span>
   </li>
   <li data-url="https://www.doubao.com/chat/?q=" data-shortcut="7" ${defaultSearchEngine === 'doubao' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/sider-icon/doubao-logo.png')}" alt="Doubao" class="search-icon">
+    <img src="${api.runtime.getURL('../images/sider-icon/doubao-logo.png')}" alt="Doubao" class="search-icon">
     <span>豆包 <span class="shortcut-key">Alt+7</span></span>
   </li>
   <li data-url="https://chatgpt.com/?q=" data-shortcut="8" ${defaultSearchEngine === 'ChatGPT' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/sider-icon/chatgpt-logo.svg')}" alt="ChatGPT" class="search-icon">
+    <img src="${api.runtime.getURL('../images/sider-icon/chatgpt-logo.svg')}" alt="ChatGPT" class="search-icon">
     <span>ChatGPT <span class="shortcut-key">Alt+8</span></span>
   </li>
   <li data-url="https://grok.com/?q=" data-shortcut="9" ${defaultSearchEngine === 'grok' ? 'class="selected"' : ''}>
-    <img src="${chrome.runtime.getURL('../images/grok-logo.svg')}" alt="Grok" class="search-icon">
+    <img src="${api.runtime.getURL('../images/grok-logo.svg')}" alt="Grok" class="search-icon">
     <span>Grok <span class="shortcut-key">Alt+9</span></span>
   </li>
 </ul>
@@ -340,11 +364,11 @@
   floatingButton.addEventListener('click', (event) => {
     if (event.altKey) {
       // Alt + 点击打开侧边栏
-      chrome.runtime.sendMessage({ 
+      api.runtime.sendMessage({ 
         action: 'openSidePanel'
       }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('Failed to open side panel:', chrome.runtime.lastError.message);
+        if (api.runtime.lastError) {
+          console.error('Failed to open side panel:', api.runtime.lastError.message);
         }
       });
     } else {
@@ -705,7 +729,7 @@
   `;
   shadow.appendChild(styleSheet);
 
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  api.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'loadDefaultBookmark') {
       displayBookmarks();
     }
@@ -933,12 +957,12 @@
   }
 
   // 初始化时获取设置
-  chrome.storage.sync.get(['enableFloatingBall'], (result) => {
+  api.storage.sync.get(['enableFloatingBall'], (result) => {
     updateFloatingBallVisibility(result.enableFloatingBall !== false);
   });
 
   // 监听来自 background 的消息
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  api.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'updateFloatingBall') {
       updateFloatingBallVisibility(request.enabled);
       sendResponse({ success: true });
@@ -975,16 +999,16 @@
   shadow.appendChild(style);
 
   function openSidePanel() {
-    chrome.runtime.sendMessage({ 
+    api.runtime.sendMessage({ 
       action: 'openSidePanel'
     }, (response) => {
-      if (chrome.runtime.lastError || !response?.success) {
+      if (api.runtime.lastError || !response?.success) {
         console.error('Failed to open side panel:', 
-          chrome.runtime.lastError?.message || response?.error || 'Unknown error');
+          api.runtime.lastError?.message || response?.error || 'Unknown error');
           
         // 如果失败，尝试延迟重试一次
         setTimeout(() => {
-          chrome.runtime.sendMessage({ 
+          api.runtime.sendMessage({ 
             action: 'openSidePanel',
             retry: true
           });

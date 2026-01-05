@@ -1,3 +1,29 @@
+// Firefox 兼容性层
+const isFirefox = typeof browser !== 'undefined';
+const api = isFirefox ? browser : chrome;
+
+// 适配Firefox的sidebar_action API
+const sidePanelAPI = {
+  setOptions: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.setOptions(options);
+  },
+  open: (options) => {
+    if (isFirefox) {
+      if (api.sidebarAction) {
+        return Promise.resolve(api.sidebarAction.open());
+      }
+      return Promise.resolve();
+    }
+    return api.sidePanel.open(options);
+  }
+};
+
 // 平台检测
 const isWindows = navigator.platform.includes('Win');
 const isMac = navigator.platform.includes('Mac');
@@ -26,9 +52,9 @@ function navigateToParent(currentFolderId, updateDisplay) {
   isNavigating = true;
   lastNavigationTime = now;
 
-  chrome.bookmarks.get(currentFolderId, function(nodes) {
-    if (chrome.runtime.lastError) {
-      console.error('[Navigation] Error:', chrome.runtime.lastError);
+  api.bookmarks.get(currentFolderId, function(nodes) {
+    if (api.runtime.lastError) {
+      console.error('[Navigation] Error:', api.runtime.lastError);
       isNavigating = false;
       return;
     }
