@@ -909,8 +909,9 @@ class SettingsManager {
     const shortcutItem = document.getElementById('configure-shortcuts');
     if (shortcutItem) {
       shortcutItem.addEventListener('click', () => {
+        const url = isFirefox ? 'about:addons' : 'chrome://extensions/shortcuts';
         api.tabs.create({
-          url: 'chrome://extensions/shortcuts'
+          url: url
         });
       });
     }

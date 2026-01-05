@@ -254,6 +254,14 @@ main.flex-1 {
 [data-theme="dark"] .links-icons a:hover {
   color: #242424;
 }
+
+/* 确保链接图标在所有模式下都可点击 */
+.links-icons,
+.settings-icon {
+  z-index: 50 !important;
+  cursor: pointer;
+}
+
 [data-theme="dark"] .settings-icon {
   background-color: #404040;
 }

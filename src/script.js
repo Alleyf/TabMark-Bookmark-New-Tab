@@ -620,20 +620,43 @@ function initVirtualScroll() {
 
 // 3. 合并 DOMContentLoaded 事件监听器
 document.addEventListener('DOMContentLoaded', function() {
-  // 初始化虚拟滚动
-  initVirtualScroll();
-  
-  // 初始化滚动指示器
-  initScrollIndicator();
-  
-  // 其他初始化代码...
-  startPeriodicSync();
-  setupSpecialLinks();
   console.log('[Init] Starting initialization...');
 
-  // 只调用一次搜索引擎初始化
-  createSearchEngineDropdown();
-  initializeSearchEngineDialog();
+  try {
+    // 初始化虚拟滚动
+    initVirtualScroll();
+  } catch (e) {
+    console.error('Error initializing virtual scroll:', e);
+  }
+  
+  try {
+    // 初始化滚动指示器
+    initScrollIndicator();
+  } catch (e) {
+    console.error('Error initializing scroll indicator:', e);
+  }
+  
+  try {
+    // 其他初始化代码...
+    startPeriodicSync();
+  } catch (e) {
+    console.error('Error starting periodic sync:', e);
+  }
+
+  try {
+    setupSpecialLinks();
+    console.log('[Init] Special links setup complete');
+  } catch (e) {
+    console.error('Error setting up special links:', e);
+  }
+
+  try {
+    // 只调用一次搜索引擎初始化
+    createSearchEngineDropdown();
+    initializeSearchEngineDialog();
+  } catch (e) {
+    console.error('Error initializing search engine:', e);
+  }
 
  
 
@@ -3620,18 +3643,20 @@ function setupSpecialLinks() {
 
       const href = this.getAttribute('href');
       let chromeUrl;
+      const isFirefox = typeof browser !== 'undefined';
+      
       switch (href) {
         case '#history':
-          chromeUrl = 'chrome://history';
+          chromeUrl = isFirefox ? 'about:history' : 'chrome://history';
           break;
         case '#downloads':
-          chromeUrl = 'chrome://downloads';
+          chromeUrl = isFirefox ? 'about:downloads' : 'chrome://downloads';
           break;
         case '#passwords':
-          chromeUrl = 'chrome://settings/passwords';
+          chromeUrl = isFirefox ? 'about:logins' : 'chrome://settings/passwords';
           break;
         case '#extensions':
-          chromeUrl = 'chrome://extensions';
+          chromeUrl = isFirefox ? 'about:addons' : 'chrome://extensions';
           break;
         case '#settings':
           openSettingsModal();

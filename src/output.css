@@ -2768,6 +2768,7 @@ input:checked+.slider:before {
   position: fixed;
   top: calc(30% + 56px);  /* theme-toggle 下方 */
   right: 2rem;
+  z-index: 50;
   /* ... 其他样式保持不变 ... */
 }
 
@@ -2776,6 +2777,7 @@ input:checked+.slider:before {
   position: fixed;
   top: calc(30% + 250px);  /* links-icons 下方 */
   right: 2rem;
+  z-index: 50;
   /* ... 其他样式保持不变 ... */
 }
 

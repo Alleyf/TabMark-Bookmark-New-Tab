@@ -65,8 +65,22 @@ class WallpaperManager {
         this.initBingWallpapers();
     }
 
-    // 新增方法：初始化预设壁纸列表
+    // 初始化预设壁纸列表
     initializePresetWallpapers() {
+        // Unsplash 精选壁纸集合 (因为没有 API Key，使用静态精选列表)
+        this.unsplashCollection = [
+            'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=1920&auto=format&fit=crop', // Nature
+            'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1920&auto=format&fit=crop', // Foggy Forest
+            'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1920&auto=format&fit=crop', // Forest
+            'https://images.unsplash.com/photo-1501854140884-074cf2b21d25?q=80&w=1920&auto=format&fit=crop', // Lake
+            'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?q=80&w=1920&auto=format&fit=crop', // Stars
+            'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?q=80&w=1920&auto=format&fit=crop', // Alpine
+            'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1920&auto=format&fit=crop', // Mountains
+            'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1920&auto=format&fit=crop', // Yosemite
+            'https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=1920&auto=format&fit=crop', // Tree
+            'https://images.unsplash.com/photo-1426604966848-d7adac402bff?q=80&w=1920&auto=format&fit=crop'  // Canyon
+        ];
+
         this.presetWallpapers = [
             {
                 url: './../images/wallpapers/wallpaper-1.jpg',
@@ -319,34 +333,27 @@ class WallpaperManager {
                 img.src = savedWallpaper;
             });
         } else {
-            // 如果没有保存的壁纸和背景，使用默认背景
-            const defaultBgOption = document.querySelector('.settings-bg-option[data-bg="gradient-background-7"]');
-            if (defaultBgOption) {
-                defaultBgOption.classList.add('active');
-                this.activeOption = defaultBgOption;
-                document.documentElement.className = 'gradient-background-7';
-                localStorage.setItem('useDefaultBackground', 'true');
-                localStorage.setItem('selectedBackground', 'gradient-background-7');
-            }
+            // 如果没有保存的壁纸和背景，使用随机 Unsplash 壁纸作为默认
+            await this.setRandomUnsplashWallpaper();
         }
     }
 
+    async setRandomUnsplashWallpaper() {
+        if (!this.unsplashCollection || this.unsplashCollection.length === 0) return;
+        const randomIndex = Math.floor(Math.random() * this.unsplashCollection.length);
+        const url = this.unsplashCollection[randomIndex];
+        // 确保移除默认背景标记
+        localStorage.removeItem('useDefaultBackground');
+        await this.setWallpaper(url);
+    }
+
     // 重置壁纸
-    resetWallpaper() {
+    async resetWallpaper() {
         // 清除所有选中状态
         this.clearAllActiveStates();
-        this.clearWallpaper();
         
-        // 设置默认背景
-        const defaultBgOption = document.querySelector('.settings-bg-option[data-bg="gradient-background-7"]');
-        if (defaultBgOption) {
-            defaultBgOption.classList.add('active');
-            this.activeOption = defaultBgOption;
-            document.documentElement.className = 'gradient-background-7';
-            // 保存默认背景设置
-            localStorage.setItem('useDefaultBackground', 'true');
-            localStorage.setItem('selectedBackground', 'gradient-background-7');
-        }
+        // 设置随机 Unsplash 壁纸作为默认
+        await this.setRandomUnsplashWallpaper();
         
         // 使用本地化的成功提示
         alert(chrome.i18n.getMessage('wallpaperResetSuccess'));

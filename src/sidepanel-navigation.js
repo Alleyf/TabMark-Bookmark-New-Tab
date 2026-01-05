@@ -44,6 +44,7 @@ const sidePanelAPI = {
   const isNewTabPage = window.location.pathname.endsWith('index.html') || 
                       window.location.pathname.endsWith('newtab.html') ||
                       window.location.href.includes('chrome://newtab') ||
+                      window.location.href.includes('about:newtab') ||
                       document.querySelector('#sidebar-container') !== null;
   
   // 只有当URL中包含侧边栏参数时才继续，或者如果这是新标签页/侧边栏主页则不添加导航栏
