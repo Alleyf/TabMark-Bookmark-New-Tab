@@ -36,12 +36,14 @@
       if (callback) callback([]);
       return Promise.resolve([]);
     }
-    
+
     return originalMethods.getChildren(id).then(result => {
-      if (callback) callback(result);
-      return result;
+      // 确保 result 是有效的数组
+      const validResult = Array.isArray(result) ? result : [];
+      if (callback) callback(validResult);
+      return validResult;
     }).catch(error => {
-      console.error('bookmarks.getChildren error:', error);
+      console.error('bookmarks.getChildren error for id:', id, error);
       if (callback) callback([]);
       // 不再抛出错误，以避免错误传播到调用栈
       return [];
@@ -50,10 +52,21 @@
 
   api.bookmarks.getTree = function(callback) {
     return originalMethods.getTree().then(result => {
-      // 确保结果是有效的数组
-      const validResult = Array.isArray(result) ? result : [];
-      if (callback) callback(validResult);
-      return validResult;
+      // Firefox 可能返回 null 或 undefined，需要处理
+      if (!result || !Array.isArray(result) || result.length === 0) {
+        console.warn('bookmarks.getTree returned empty or invalid result, returning empty array');
+        const emptyResult = [];
+        if (callback) callback(emptyResult);
+        return emptyResult;
+      }
+
+      // 确保第一个节点有 children 属性
+      if (!result[0].children) {
+        result[0].children = [];
+      }
+
+      if (callback) callback(result);
+      return result;
     }).catch(error => {
       console.error('bookmarks.getTree error:', error);
       if (callback) callback([]);

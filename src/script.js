@@ -1021,8 +1021,10 @@ const bookmarksCache = {
 function updateBookmarkCards() {
   const bookmarksList = document.getElementById('bookmarks-list');
   const defaultBookmarkId = localStorage.getItem('defaultBookmarkId');
-  const parentId = defaultBookmarkId || bookmarksList?.dataset.parentId || '1';
-  
+  // 使用正确的 Firefox 默认书签 ID
+  const firefoxDefaultId = isFirefox ? 'toolbar_____' : '1';
+  const parentId = defaultBookmarkId || bookmarksList?.dataset.parentId || firefoxDefaultId;
+
   // 验证 parentId 是否有效
   if (!parentId) {
     console.warn('updateBookmarkCards: invalid parentId, using default');
@@ -1042,6 +1044,17 @@ function updateBookmarkCards() {
     if (bookmarksList) {
       bookmarksList.dataset.parentId = parentId;
     }
+  }).catch(error => {
+    console.error('updateBookmarkCards: Failed to get bookmarks for parentId:', parentId, error);
+    // 尝试获取默认书签工具栏
+    api.bookmarks.getChildren(firefoxDefaultId).then(bookmarks => {
+      const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+      displayBookmarks({ id: firefoxDefaultId, children: validBookmarks });
+    }).catch(e => {
+      console.error('Failed to get toolbar bookmarks:', e);
+      // 最后的降级方案：显示空状态
+      displayBookmarks({ id: parentId, children: [] });
+    });
   });
 }
 
@@ -1099,15 +1112,15 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       api.bookmarks.getChildren(parentId, (bookmarks) => {
-        if (api.runtime.lastError) {
-          throw api.runtime.lastError;
-        }
+        // 安全地处理返回的书签数据，过滤掉null或无效值
+        const validBookmarks = Array.isArray(bookmarks) ? 
+          bookmarks.filter(b => b && typeof b === 'object') : [];
         
         // 缓存新数据
-        bookmarksCache.set(parentId, bookmarks);
+        bookmarksCache.set(parentId, validBookmarks);
         
         // 初始渲染第一页
-        renderBookmarksPage({ bookmarks, totalCount: bookmarks.length }, 0);
+        renderBookmarksPage({ bookmarks: validBookmarks, totalCount: validBookmarks.length }, 0);
       });
     } finally {
       // 移除加载状态
@@ -4080,11 +4093,15 @@ document.addEventListener('DOMContentLoaded', function () {
       return new Promise((resolve) => {
         api.bookmarks.getChildren(id, async (items) => {
           let localCount = 0;
+          
+          // 安全地过滤掉 null 或无效的项目
+          const validItems = Array.isArray(items) ? 
+            items.filter(item => item && typeof item === 'object') : [];
 
-          for (const item of items) {
+          for (const item of validItems) {
             if (item.url && item.url.startsWith('http')) {
               localCount++;
-            } else if (currentDepth < maxDepth) {
+            } else if (currentDepth < maxDepth && item.id) {
               localCount += await countBookmarks(item.id, currentDepth + 1);
             }
           }
@@ -4172,10 +4189,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 return new Promise((resolve) => {
                   api.bookmarks.getChildren(folderId, async (items) => {
                     let urls = [];
-                    for (const item of items) {
+                    
+                    // 安全地过滤掉 null 或无效的项目
+                    const validItems = Array.isArray(items) ? 
+                      items.filter(item => item && typeof item === 'object') : [];
+                    
+                    for (const item of validItems) {
                       if (item.url) {
                         urls.push(item.url);
-                      } else {
+                      } else if (item.id) {
                         // 递归获取子文件夹的 URLs
                         const subUrls = await getAllBookmarkUrls(item.id);
                         urls = urls.concat(subUrls);
