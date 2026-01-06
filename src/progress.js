@@ -125,7 +125,7 @@
                         });
 
                     } catch (error) {
-                        console.error('分析背景颜色失败:', error);
+                        // Error analyzing background color
                     }
                 };
             }

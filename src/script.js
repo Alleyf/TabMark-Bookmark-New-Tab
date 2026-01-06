@@ -31,6 +31,11 @@ const STORAGE_WRITE_INTERVAL = 1000; // 1秒的节流间隔
 // 在文件顶部添加导入语句
 import { ICONS } from './icons.js';
 
+// 鼠标侧键导航相关变量
+let mouseNavigationEnabled = true;  // 是否启用鼠标侧键导航
+const mouseNavigationCooldown = 300;  // 导航冷却时间（毫秒）
+let lastMouseNavigationTime = 0;  // 上次鼠标导航时间
+
 // 解决函数未定义错误，将这些函数提升到全局范围
 // 创建二维码函数
 function createQRCode(url, bookmarkName) {
@@ -2026,49 +2031,42 @@ function createBookmarkCard(bookmark, index) {
                            bookmark.url.startsWith('edge://') ||
                            bookmark.url.startsWith('about:');
 
-      console.log('[Bookmark Click] Starting...', {
-        url: bookmark.url,
-        isInternalUrl: isInternalUrl,
-        isSidePanel: isSidePanel
-      });
+
 
       // 处理内部链接
       if (isInternalUrl) {
-        console.log('[Bookmark Click] Opening internal URL');
+        
         api.tabs.create({
           url: bookmark.url,
           active: true
         }).then(tab => {
-          console.log('[Bookmark Click] Internal tab created successfully:', tab);
+          
         }).catch(error => {
-          console.error('[Bookmark Click] Failed to create internal tab:', error);
+          
         });
         return;
       }
 
       // 处理普通链接
       if (isSidePanel) {
-        console.log('[Bookmark Click] Opening in Side Panel mode');
+        
         // 获取侧边栏模式下的链接打开方式设置
         api.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
           // 默认在新标签页中打开
           const openInNewTab = result.sidepanelOpenInNewTab !== false;
           const openInSidepanel = result.sidepanelOpenInSidepanel === true;
           
-          console.log('[Bookmark Click] Side Panel settings:', {
-            openInNewTab: openInNewTab,
-            openInSidepanel: openInSidepanel
-          });
+    
           
           if (openInSidepanel) {
             // 在侧边栏内打开链接
-            console.log('[Bookmark Click] Opening in Side Panel iframe');
+
             // 使用 SidePanelManager 加载 URL
             try {
               // 检查 SidePanelManager 是否已定义
               if (typeof SidePanelManager === 'undefined') {
                 // 如果未定义，则创建一个简单的加载函数
-                console.log('[Bookmark Click] SidePanelManager not defined, using fallback method');
+
                 const sidePanelContent = document.getElementById('side-panel-content');
                 const sidePanelIframe = document.getElementById('side-panel-iframe');
                 
@@ -2094,7 +2092,7 @@ function createBookmarkCard(bookmark, index) {
                   // 显示返回按钮
                   backButton.style.display = 'flex';
                 } else {
-                  console.error('[Bookmark Click] Side panel elements not found, falling back to new tab');
+
                   api.tabs.create({
                     url: bookmark.url,
                     active: true
@@ -2108,7 +2106,6 @@ function createBookmarkCard(bookmark, index) {
                 window.sidePanelManager.loadUrl(bookmark.url);
               }
             } catch (error) {
-              console.error('[Bookmark Click] Error using SidePanelManager:', error);
               // 出错时回退到在新标签页中打开
               api.tabs.create({
                 url: bookmark.url,
@@ -2121,14 +2118,14 @@ function createBookmarkCard(bookmark, index) {
               url: bookmark.url,
               active: true
             }).then(tab => {
-              console.log('[Bookmark Click] Tab created successfully:', tab);
+
             }).catch(error => {
-              console.error('[Bookmark Click] Failed to create tab:', error);
+
             });
           }
         });
       } else {
-        console.log('[Bookmark Click] Opening in Main Window mode');
+
         api.storage.sync.get(['openInNewTab'], (result) => {
           if (result.openInNewTab !== false) {
             window.open(bookmark.url, '_blank');
@@ -2138,7 +2135,6 @@ function createBookmarkCard(bookmark, index) {
         });
       }
     } catch (error) {
-      console.error('[Bookmark Click] Error:', error);
     } finally {
       setTimeout(() => {
         isProcessingClick = false;
@@ -2182,13 +2178,11 @@ function applyColors(card, colors) {
 
 function openInNewWindow(url) {
   chrome.windows.create({ url: url }, function (window) {
-    console.log('New window opened with id: ' + window.id);
   });
 }
 
 function openInIncognito(url) {
   chrome.windows.create({ url: url, incognito: true }, function (window) {
-    console.log('New incognito window opened with id: ' + window.id);
   });
 }
 
@@ -2199,7 +2193,6 @@ const Utilities = (function() {
   function showToast(message = getLocalizedMessage('moreSearchSupportToast'), duration = 1500) {
     const toast = document.getElementById('more-button-toast');
     if (!toast) {
-      console.error('Toast element not found');
       return;
     }
 
@@ -2231,11 +2224,11 @@ const Utilities = (function() {
       navigator.clipboard.writeText(bookmark.url).then(() => {
         showToast(getLocalizedMessage('linkCopied'));
       }).catch(err => {
-        console.error('Failed to copy link:', err);
+        
         showToast(getLocalizedMessage('copyLinkFailed'));
       });
     } catch (error) {
-      console.error('Error copying bookmark link:', error);
+      
       if (error.message === 'Extension context invalidated.') {
         showToast(getLocalizedMessage('extensionReloaded'));
       } else {
@@ -2266,7 +2259,7 @@ function showContextMenu(event, item, type = 'bookmark') {
   }
 
   if (!contextMenu) {
-    console.error('Failed to create context menu');
+
     return;
   }
 
@@ -2334,12 +2327,9 @@ function createContextMenuItems(contextMenu, type) {
       text: type === 'quickLink' ? getLocalizedMessage('deleteQuickLink') : getLocalizedMessage('deleteBookmark'), 
       icon: 'delete', 
       action: () => {
-        console.log('=== Delete Action Triggered ===');
-        console.log('Current bookmark:', currentBookmark);
-        console.log('Menu type:', type);
+
         
         if (!currentBookmark) {
-          console.error('No item selected for deletion');
           return;
         }
 
@@ -2354,29 +2344,27 @@ function createContextMenuItems(contextMenu, type) {
           }
         };
         
-        console.log('Set itemToDelete:', itemToDelete);
         
         // 根据类型显示不同的确认消息
         const message = itemToDelete.type === 'quickLink' 
           ? chrome.i18n.getMessage("confirmDeleteQuickLink", [`<strong>${itemToDelete.data.title}</strong>`])
           : chrome.i18n.getMessage("confirmDeleteBookmark", [`<strong>${itemToDelete.data.title}</strong>`]);
         
-        console.log('Showing confirmation dialog with message:', message);
+
         
         showConfirmDialog(message, () => {
-          console.log('=== Delete Confirmation Callback ===');
-          console.log('itemToDelete:', itemToDelete);
+
           
           if (itemToDelete && itemToDelete.data) {
             if (itemToDelete.type === 'quickLink') {
-              console.log('Deleting quick link:', itemToDelete.data);
+              
               deleteQuickLink(itemToDelete.data);
             } else {
-              console.log('Deleting bookmark:', itemToDelete.data);
+
               deleteBookmark(itemToDelete.data.id, itemToDelete.data.title);
             }
           } else {
-            console.error('Invalid itemToDelete state:', itemToDelete);
+
           }
         });
       }
@@ -2414,12 +2402,8 @@ function createContextMenuItems(contextMenu, type) {
 
 function showDeleteConfirmDialog() {
   if (!itemToDelete || !itemToDelete.data) {
-    console.error('Invalid delete item:', itemToDelete);
     return;
   }
-
-  console.log('=== Showing Delete Confirm Dialog ===');
-  console.log('Item to delete:', itemToDelete);
 
   const confirmDialog = document.getElementById('confirm-dialog');
   const confirmMessage = document.getElementById('confirm-dialog-message');
@@ -2427,7 +2411,7 @@ function showDeleteConfirmDialog() {
   const cancelButton = document.getElementById('cancel-delete-button');
 
   if (!confirmDialog || !confirmMessage || !confirmButton || !cancelButton) {
-    console.error('Required dialog elements not found');
+    
     return;
   }
 
@@ -2440,16 +2424,12 @@ function showDeleteConfirmDialog() {
     : chrome.i18n.getMessage("confirmDeleteBookmark", [`<strong>${itemToDelete.data.title}</strong>`]);
   confirmMessage.innerHTML = message;
   
-  console.log('Showing confirmation dialog for:', {
-    type: itemToDelete.type,
-    title: itemToDelete.data.title
-  });
+
   
   confirmDialog.style.display = 'block';
 
   const handleConfirm = () => {
-    console.log('=== Delete Confirmed ===');
-    console.log('Deleting item:', itemToDelete);
+
     
     if (itemToDelete.type === 'quickLink') {
       deleteQuickLink(itemToDelete.data);
@@ -2463,15 +2443,13 @@ function showDeleteConfirmDialog() {
   };
 
   const handleCancel = () => {
-    console.log('=== Delete Cancelled ===');
-    console.log('Cancelled item:', itemToDelete);
+
     confirmDialog.style.display = 'none';
     cleanup();
     itemToDelete = null;
   };
 
   const cleanup = () => {
-    console.log('Cleaning up event listeners and state');
     confirmButton.removeEventListener('click', handleConfirm);
     cancelButton.removeEventListener('click', handleCancel);
     itemToDelete = null;
@@ -2496,9 +2474,6 @@ function createQuickLinkCard(quickLink) {
 
   card.addEventListener('contextmenu', function(event) {
     event.preventDefault();
-    console.log('=== Quick Link Context Menu Triggered ===');
-    console.log('Quick link data:', quickLink);
-    console.log('Card dataset:', this.dataset);
     
     // 构造完整的快捷链接对象
     const quickLinkData = {
@@ -2508,7 +2483,7 @@ function createQuickLinkCard(quickLink) {
       type: 'quickLink'  // 明确指定类型
     };
     
-    console.log('Constructed quickLinkData:', quickLinkData);
+
     showContextMenu(event, quickLinkData, 'quickLink');
   });
 
@@ -2528,25 +2503,16 @@ function closeConfirmDialog() {
 
 // 分别定义两个函数处理不同类型的删除
 function confirmBookmarkDeletion(bookmark) {
-  console.log('=== Starting Bookmark Deletion Process ===');
-  console.log('Input bookmark:', bookmark);
-  console.log('Current states before setting:', {
-    itemToDelete,
-    currentBookmark
-  });
+
 
   if (!bookmark || !bookmark.id) {
-    console.error('Invalid bookmark data:', bookmark);
     return;
   }
 
   // 设置当前要删除的书签
   itemToDelete = { ...bookmark };
   
-  console.log('States after setting bookmark:', {
-    itemToDelete,
-    currentBookmark
-  });
+
 
   const confirmDialog = document.getElementById('confirm-dialog');
   const confirmMessage = document.getElementById('confirm-dialog-message');
@@ -2554,7 +2520,7 @@ function confirmBookmarkDeletion(bookmark) {
   const cancelButton = document.getElementById('cancel-delete-button');
 
   if (!confirmDialog || !confirmMessage || !confirmButton || !cancelButton) {
-    console.error('Required dialog elements not found');
+    
     return;
   }
 
@@ -2570,8 +2536,7 @@ function confirmBookmarkDeletion(bookmark) {
   confirmDialog.style.display = 'block';
 
   const handleConfirm = () => {
-    console.log('=== Bookmark Deletion Confirmed ===');
-    console.log('Deleting bookmark:', itemToDelete);
+
     deleteBookmark(itemToDelete);
     confirmDialog.style.display = 'none';
     cleanup();
@@ -2579,11 +2544,7 @@ function confirmBookmarkDeletion(bookmark) {
   };
 
   const handleCancel = () => {
-    console.log('=== Bookmark Deletion Cancelled ===');
-    console.log('States before cleanup:', {
-      itemToDelete,
-      currentBookmark
-    });
+
     confirmDialog.style.display = 'none';
     cleanup();
     clearDeleteStates();
@@ -2602,25 +2563,16 @@ function confirmBookmarkDeletion(bookmark) {
 }
 
 function confirmQuickLinkDeletion(quickLink) {
-  console.log('=== Starting QuickLink Deletion Process ===');
-  console.log('Input quickLink:', quickLink);
-  console.log('Current states before setting:', {
-    itemToDelete,
-    currentBookmark
-  });
+
 
   if (!quickLink || !quickLink.id) {
-    console.error('Invalid quick link data:', quickLink);
     return;
   }
 
   // 设置当前要删除的快捷链接
   itemToDelete = { ...quickLink };
 
-  console.log('States after setting quickLink:', {
-    itemToDelete,
-    currentBookmark
-  });
+
 
   const confirmDialog = document.getElementById('confirm-dialog');
   const confirmMessage = document.getElementById('confirm-dialog-message');
@@ -2628,7 +2580,7 @@ function confirmQuickLinkDeletion(quickLink) {
   const cancelButton = document.getElementById('cancel-delete-button');
 
   if (!confirmDialog || !confirmMessage || !confirmButton || !cancelButton) {
-    console.error('Required dialog elements not found');
+    
     return;
   }
 
@@ -2644,8 +2596,7 @@ function confirmQuickLinkDeletion(quickLink) {
   confirmDialog.style.display = 'block';
 
   const handleConfirm = () => {
-    console.log('=== QuickLink Deletion Confirmed ===');
-    console.log('Deleting quickLink:', itemToDelete);
+
     deleteQuickLink(itemToDelete);
     confirmDialog.style.display = 'none';
     cleanup();
@@ -2653,18 +2604,13 @@ function confirmQuickLinkDeletion(quickLink) {
   };
 
   const handleCancel = () => {
-    console.log('=== QuickLink Deletion Cancelled ===');
-    console.log('States before cleanup:', {
-      itemToDelete,
-      currentBookmark
-    });
+
     confirmDialog.style.display = 'none';
     cleanup();
     clearDeleteStates();
   };
 
   const cleanup = () => {
-    console.log('Cleaning up QuickLink deletion event listeners');
     confirmButton.removeEventListener('click', handleConfirm);
     cancelButton.removeEventListener('click', handleCancel);
   };
@@ -2678,11 +2624,7 @@ function confirmQuickLinkDeletion(quickLink) {
 
 // 新增：清理所有删除相关的状态
 function clearDeleteStates() {
-  console.log('=== Clearing All Delete States ===');
-  console.log('States before clearing:', {
-    itemToDelete,
-    currentBookmark
-  });
+
   
   itemToDelete = null;
   currentBookmark = null;
@@ -2711,7 +2653,7 @@ function showConfirmDialog(message, callback) {
   const cancelButton = document.getElementById('cancel-delete-button');
 
   if (!confirmDialog || !confirmMessage || !confirmButton || !cancelButton) {
-    console.error('Required dialog elements not found');
+    
     return;
   }
 
@@ -6540,7 +6482,77 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 其他初始化代码...
   startPeriodicSync();
+  
+  // 初始化鼠标侧键导航功能
+  initMouseSideButtonNavigation();
 });
+
+// 鼠标侧键导航功能
+function initMouseSideButtonNavigation() {
+  // 监听鼠标按下事件
+  document.addEventListener('mousedown', function(event) {
+    // 检查是否启用了鼠标侧键导航
+    if (!mouseNavigationEnabled) return;
+    
+    // 检查是否在导航冷却时间内
+    const now = Date.now();
+    if (now - lastMouseNavigationTime < mouseNavigationCooldown) return;
+    
+    // 鼠标侧键检测：标准的button值是3（后退）和4（前进）
+    // 但实际实现中，后退通常是4，前进是5（在buttons属性中）
+    // 为了兼容性，同时检查event.button和event.buttons
+    if (event.button === 3 || (event.buttons & 4)) { // 鼠标后退键
+      event.preventDefault();
+      try {
+        // 使用浏览器API后退
+        window.history.back();
+        lastMouseNavigationTime = now;
+      } catch (e) {
+        console.error('鼠标后退失败:', e);
+      }
+    } else if (event.button === 4 || (event.buttons & 8)) { // 鼠标前进键
+      event.preventDefault();
+      try {
+        // 使用浏览器API前进
+        window.history.forward();
+        lastMouseNavigationTime = now;
+      } catch (e) {
+        console.error('鼠标前进失败:', e);
+      }
+    }
+  });
+  
+  // 也可以监听mouseup事件作为备用
+  document.addEventListener('mouseup', function(event) {
+    // 检查是否启用了鼠标侧键导航
+    if (!mouseNavigationEnabled) return;
+    
+    // 检查是否在导航冷却时间内
+    const now = Date.now();
+    if (now - lastMouseNavigationTime < mouseNavigationCooldown) return;
+    
+    // 有些浏览器可能需要在mouseup事件中处理侧键
+    if (event.button === 3 || (event.buttons & 4)) { // 鼠标后退键
+      event.preventDefault();
+      try {
+        // 使用浏览器API后退
+        window.history.back();
+        lastMouseNavigationTime = now;
+      } catch (e) {
+        console.error('鼠标后退失败:', e);
+      }
+    } else if (event.button === 4 || (event.buttons & 8)) { // 鼠标前进键
+      event.preventDefault();
+      try {
+        // 使用浏览器API前进
+        window.history.forward();
+        lastMouseNavigationTime = now;
+      } catch (e) {
+        console.error('鼠标前进失败:', e);
+      }
+    }
+  });
+}
 
 
 

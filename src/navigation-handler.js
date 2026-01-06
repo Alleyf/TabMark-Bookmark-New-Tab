@@ -13,15 +13,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const isSidePanel = urlParams.get('is_sidepanel') === 'true' || 
                       urlParams.get('sidepanel_view') === 'true';
   
-  console.log('[Navigation Handler] Page loaded, is side panel:', isSidePanel);
-  
   // 检查是否在iframe中
   const isInIframe = window !== window.top;
   
   // 如果是在侧边栏iframe中
   if (isSidePanel && isInIframe) {
-    console.log('[Navigation Handler] This page is loaded in a side panel iframe');
-    
     // 获取存储的导航数据
     api.storage.local.get('sidePanelNavData', function(data) {
       if (data && data.sidePanelNavData) {
@@ -38,7 +34,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Alt+Home 或 Alt+H 键回到主页
       if ((e.altKey && e.key === 'Home') || (e.altKey && e.key === 'h')) {
         e.preventDefault();
-        console.log('[Navigation Handler] Keyboard shortcut for home detected');
         
         // 直接调用Chrome API返回主页
         try {
@@ -73,9 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (linkElement && linkElement.tagName === 'A') {
         const href = linkElement.getAttribute('href');
         if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-          // 记录点击链接的事件，用于后续通知父窗口更新历史记录
-          console.log('[Navigation Handler] Link clicked:', href);
-          
           // 对于相对路径，转换为绝对路径
           const absoluteUrl = new URL(href, window.location.href).href;
           
@@ -109,7 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 创建监听器检查URL变化
     const urlChangeChecker = setInterval(() => {
       if (lastUrl !== window.location.href) {
-        console.log('[Navigation Handler] URL changed from:', lastUrl, 'to:', window.location.href);
         // 通知父窗口更新历史记录
         window.parent.postMessage({
           action: 'updateHistory',
@@ -124,14 +115,12 @@ document.addEventListener('DOMContentLoaded', function() {
       clearInterval(urlChangeChecker);
     });
   } else {
-    console.log('[Navigation Handler] Not in side panel iframe, not injecting navigation bar');
+    // Not in side panel iframe
   }
 });
 
 // 监听postMessage消息
 window.addEventListener('message', function(event) {
-  console.log('[Navigation Handler] Received message:', event.data);
-  
   if (!event.data || typeof event.data !== 'object') return;
   
   const { action } = event.data;
@@ -151,13 +140,10 @@ window.addEventListener('message', function(event) {
 
 // 在iframe中注入导航栏
 function injectNavBarInIframe(history, currentIndex, url) {
-  console.log('[Navigation Handler] Injecting navigation bar in iframe');
-  
   // 检查是否已经存在导航栏
   if (document.querySelector('.iframe-sidepanel-nav-bar') || 
       document.querySelector('.sidepanel-nav-bar') || 
       document.querySelector('.simple-nav-bar')) {
-    console.log('[Navigation Handler] Navigation bar already exists');
     return;
   }
   
@@ -255,14 +241,11 @@ function injectNavBarInIframe(history, currentIndex, url) {
   
   // 直接使用Chrome API实现导航回主页
   const navigateToHome = () => {
-    console.log('[Navigation Handler] Executing direct home navigation');
-    
     // 尝试多种方法返回主页
     let succeeded = false;
     
     // 1. 尝试直接设置URL
     try {
-      console.log('[Navigation Handler] Attempting direct URL navigation');
       // 获取扩展根URL
       const extensionUrl = api.runtime.getURL('src/sidepanel.html');
       
@@ -277,12 +260,12 @@ function injectNavBarInIframe(history, currentIndex, url) {
         window.top.location.href = extensionUrl;
         succeeded = true;
       } catch (e) {
-        console.log('[Navigation Handler] Could not navigate top window, continuing with other methods');
+        // Could not navigate top window, continuing with other methods
       }
       
       return true;
     } catch (e) {
-      console.error('[Navigation Handler] Direct URL navigation failed:', e);
+      // Direct URL navigation failed
     }
     
     // 2. 优先使用Chrome API
@@ -293,11 +276,11 @@ function injectNavBarInIframe(history, currentIndex, url) {
           source: 'iframe-direct',
           timestamp: Date.now()
         }, (response) => {
-          console.log('[Navigation Handler] Direct home navigation response:', response);
+          // Direct home navigation response
         });
         return true;
       } catch (e) {
-        console.error('[Navigation Handler] Chrome API navigation failed:', e);
+        // Chrome API navigation failed
       }
     }
     
@@ -309,10 +292,9 @@ function injectNavBarInIframe(history, currentIndex, url) {
           source: 'iframe-backup',
           timestamp: Date.now() 
         }, '*');
-        console.log('[Navigation Handler] Sent home navigation message to parent');
         return true;
-      } catch (e) {
-        console.error('[Navigation Handler] Parent window messaging failed:', e);
+        } catch (e) {
+        // Parent window messaging failed
         return false;
       }
     }
@@ -321,14 +303,12 @@ function injectNavBarInIframe(history, currentIndex, url) {
   // 添加点击和其他事件
   homeButton.addEventListener('click', (e) => {
     e.preventDefault();
-    console.log('[Navigation Handler] Home button clicked in iframe');
     navigateToHome();
   });
   
   // 添加双击事件作为备份
   homeButton.addEventListener('dblclick', (e) => {
     e.preventDefault();
-    console.log('[Navigation Handler] Home button double-clicked in iframe');
     navigateToHome();
   });
   
@@ -381,8 +361,6 @@ function injectNavBarInIframe(history, currentIndex, url) {
   document.head.appendChild(style);
   document.body.insertBefore(navBar, document.body.firstChild);
   
-  console.log('[Navigation Handler] Navigation bar injected successfully');
-  
   // 添加导航按钮事件监听
   const iframeHomeButton = document.querySelector('.iframe-sidepanel-nav-bar button[title="返回书签列表"]');
   const iframeBackButton = document.querySelector('.iframe-sidepanel-nav-bar button[title="返回上一页"]');
@@ -390,38 +368,35 @@ function injectNavBarInIframe(history, currentIndex, url) {
   
   if (iframeHomeButton) {
     iframeHomeButton.addEventListener('click', () => {
-      console.log('[Navigation Handler] Home button clicked in iframe');
       // 发送消息到父窗口
       window.parent.postMessage({ action: 'navigateHome' }, '*');
       // 同时尝试通过chrome API发送
       try {
         api.runtime.sendMessage({ action: 'navigateHome' });
       } catch (e) {
-        console.log('[Navigation Handler] Failed to send message via chrome API:', e);
+        // Failed to send message via chrome API
       }
     });
   }
   
   if (iframeBackButton) {
     iframeBackButton.addEventListener('click', () => {
-      console.log('[Navigation Handler] Back button clicked in iframe');
       window.parent.postMessage({ action: 'navigateBack' }, '*');
       try {
         api.runtime.sendMessage({ action: 'navigateBack' });
       } catch (e) {
-        console.log('[Navigation Handler] Failed to send message via chrome API:', e);
+        // Failed to send message via chrome API
       }
     });
   }
   
   if (iframeForwardButton) {
     iframeForwardButton.addEventListener('click', () => {
-      console.log('[Navigation Handler] Forward button clicked in iframe');
       window.parent.postMessage({ action: 'navigateForward' }, '*');
       try {
         api.runtime.sendMessage({ action: 'navigateForward' });
       } catch (e) {
-        console.log('[Navigation Handler] Failed to send message via chrome API:', e);
+        // Failed to send message via chrome API
       }
     });
   }

@@ -95,6 +95,10 @@
         "message": "开启悬浮球",
         "description": "开启悬浮球的标签"
     },
+    "floatingBallDescription": {
+        "message": "开启悬浮球后会在页面右上角显示一个可点击的悬浮图标，用于快速访问搜索引擎和书签。",
+        "description": "悬浮球功能描述"
+    },
     "languageSettingsTitle": {
         "message": "语言 / Language",
         "description": "语言设置标题"
@@ -139,17 +143,29 @@
         "message": "文件夹已删除：ID=$1，标题=$2",
         "description": "文件夹删除时的日志消息"
     },
+    "earlyMorningGreeting": {
+        "message": "早上好🌅",
+        "description": "清晨的问候语（5-8点）"
+    },
     "morningGreeting": {
         "message": "早上好👋",
-        "description": "早上的问候语"
+        "description": "早上的问候语（8-12点）"
+    },
+    "noonGreeting": {
+        "message": "中午好☀️",
+        "description": "中午的问候语（12-14点）"
     },
     "afternoonGreeting": {
         "message": "下午好👋",
-        "description": "下午的问候语"
+        "description": "下午的问候语（14-18点）"
     },
     "eveningGreeting": {
-        "message": "晚上好👋",
-        "description": "晚上的问候语"
+        "message": "晚上好🌆",
+        "description": "晚上的问候语（18-22点）"
+    },
+    "nightGreeting": {
+        "message": "夜深了🌙",
+        "description": "深夜的问候语（22-5点）"
     },
     "linkCopied": {
         "message": "链接已复制到剪贴板",

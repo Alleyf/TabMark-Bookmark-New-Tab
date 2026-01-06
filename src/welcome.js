@@ -37,27 +37,34 @@ const WelcomeManager = {
         const now = new Date();
         const hours = now.getHours();
         let greeting;
-        
-        if (hours < 12) {
+
+        // 根据时间段显示不同的问候语
+        if (hours >= 5 && hours < 8) {
+            greeting = window.getLocalizedMessage('earlyMorningGreeting');
+        } else if (hours >= 8 && hours < 12) {
             greeting = window.getLocalizedMessage('morningGreeting');
-        } else if (hours < 18) {
+        } else if (hours >= 12 && hours < 14) {
+            greeting = window.getLocalizedMessage('noonGreeting');
+        } else if (hours >= 14 && hours < 18) {
             greeting = window.getLocalizedMessage('afternoonGreeting');
-        } else {
+        } else if (hours >= 18 && hours < 22) {
             greeting = window.getLocalizedMessage('eveningGreeting');
+        } else {
+            greeting = window.getLocalizedMessage('nightGreeting');
         }
 
         const welcomeMessage = `${greeting}, ${userName}`;
         const welcomeElement = document.getElementById('welcome-message');
         if (welcomeElement) {
             welcomeElement.textContent = welcomeMessage;
-            
+
             // 只有在需要时才检查显示状态
             if (checkVisibility) {
                 api.storage.sync.get(['showWelcomeMessage'], (result) => {
                     welcomeElement.style.display = result.showWelcomeMessage !== false ? '' : 'none';
                 });
             }
-            
+
             this.adjustTextColor(welcomeElement);
         }
     },
@@ -132,7 +139,19 @@ const WelcomeManager = {
             // 进行新的计算...
             const img = new Image();
             img.crossOrigin = "Anonymous";
-            img.src = backgroundImage.slice(5, -2);
+            
+            // 正确提取背景图片URL
+            let imageUrl = backgroundImage;
+            if (backgroundImage.startsWith('url(')) {
+                // 移除 url() 包装和可能的引号
+                imageUrl = backgroundImage.slice(4, -1); // 移除 'url('
+                if (imageUrl.startsWith("'") && imageUrl.endsWith("'")) {
+                    imageUrl = imageUrl.slice(1, -1);
+                } else if (imageUrl.startsWith('"') && imageUrl.endsWith('"')) {
+                    imageUrl = imageUrl.slice(1, -1);
+                }
+            }
+            img.src = imageUrl;
             
             img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -198,11 +217,6 @@ const WelcomeManager = {
                     b = Math.floor(b / count);
 
                     const brightness = (r * 0.299 + g * 0.587 + b * 0.114);
-                    console.log('[WelcomeManager] Sampled area color:', {
-                        area: sampleArea,
-                        color: {r, g, b},
-                        brightness
-                    });
 
                     const textColor = brightness > 128 ? 
                         'rgba(51, 51, 51, 0.9)' : 
@@ -214,16 +228,11 @@ const WelcomeManager = {
                     element.style.color = textColor;
                     element.style.transition = 'color 0.3s ease';
                 } catch (error) {
-                    console.error('分析背景颜色失败:', error, {
-                        sampleArea,
-                        sourceArea
-                    });
                     element.style.color = 'rgba(255, 255, 255, 0.9)';
                 }
             };
 
             img.onerror = () => {
-                console.error('背景图片加载失败');
                 if (!this.colorCache.lastTextColor) {
                     // 只有在没有缓存颜色时才设置默认颜色
                     element.style.color = 'rgba(255, 255, 255, 0.9)';

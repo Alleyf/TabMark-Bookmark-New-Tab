@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
   "name": "TabMark-Bookmark New Tab",
-  "version": "1.245",
+  "version": "1.246",
   "description": "__MSG_extDescription__",
-  "default_locale": "en",
+  "default_locale": "zh_CN",
   "chrome_url_overrides": {
     "newtab": "src/index.html"
   },

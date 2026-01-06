@@ -111,18 +111,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // 更新固定的快捷方式
   function updateFixedShortcut(updatedSite, oldUrl) {
-    api.storage.sync.get('fixedShortcuts', (result) => {
-      let fixedShortcuts = result.fixedShortcuts || [];
-      const index = fixedShortcuts.findIndex(s => s.url === oldUrl);
-      if (index !== -1) {
-        fixedShortcuts[index] = updatedSite;
-      } else {
-        fixedShortcuts.push(updatedSite);
-      }
-      api.storage.sync.set({ fixedShortcuts }, () => {
-        if (api.runtime.lastError) {
-          console.error('Error saving updated shortcut:', api.runtime.lastError);
+      api.storage.sync.get('fixedShortcuts', (result) => {
+        let fixedShortcuts = result.fixedShortcuts || [];
+        const index = fixedShortcuts.findIndex(s => s.url === oldUrl);
+        if (index !== -1) {
+          fixedShortcuts[index] = updatedSite;
         } else {
+          fixedShortcuts.push(updatedSite);
+        }
+        api.storage.sync.set({ fixedShortcuts }, () => {
+          if (api.runtime.lastError) {
+            // Error saving updated shortcut
+          } else {
           refreshQuickLink(updatedSite, oldUrl);
           setTimeout(() => generateQuickLinks(), 0);
         }
@@ -382,34 +382,20 @@ document.addEventListener('DOMContentLoaded', function () {
           // 通过页面文件名判断环境
           const isSidePanel = window.location.pathname.endsWith('sidepanel.html');
 
-          console.log('[Quick Link Click] Starting...', {
-            url: site.url,
-            currentUrl: window.location.href,
-            isSidePanel: isSidePanel
-          });
-
           if (isSidePanel) {
-            console.log('[Quick Link Click] Opening in Side Panel mode');
             // 获取侧边栏模式下的链接打开方式设置
             api.storage.sync.get(['sidepanelOpenInNewTab', 'sidepanelOpenInSidepanel'], (result) => {
               // 默认在新标签页中打开
               const openInNewTab = result.sidepanelOpenInNewTab !== false;
               const openInSidepanel = result.sidepanelOpenInSidepanel === true;
               
-              console.log('[Quick Link Click] Side Panel settings:', {
-                openInNewTab: openInNewTab,
-                openInSidepanel: openInSidepanel
-              });
-              
               if (openInSidepanel) {
                 // 在侧边栏内打开链接
-                console.log('[Quick Link Click] Opening in Side Panel iframe');
                 // 使用 SidePanelManager 加载 URL
                 try {
                   // 检查 SidePanelManager 是否已定义
                   if (typeof SidePanelManager === 'undefined') {
                     // 如果未定义，则创建一个简单的加载函数
-                    console.log('[Quick Link Click] SidePanelManager not defined, using fallback method');
                     const sidePanelContent = document.getElementById('side-panel-content');
                     const sidePanelIframe = document.getElementById('side-panel-iframe');
                     
@@ -449,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     window.sidePanelManager.loadUrl(site.url);
                   }
                 } catch (error) {
-                  console.error('[Quick Link Click] Error using SidePanelManager:', error);
                   // 出错时回退到在新标签页中打开
                   api.tabs.create({
                     url: site.url,
@@ -472,9 +457,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log('[Quick Link Click] Opening in Main Window mode');
             // 在主页面中根据设置决定打开方式
             api.storage.sync.get(['openInNewTab'], (result) => {
-              console.log('[Quick Link Click] Settings check:', {
-                openInNewTab: result.openInNewTab
-              });
               if (result.openInNewTab !== false) {
                 window.open(site.url, '_blank');
               } else {
@@ -483,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
           }
         } catch (error) {
-          console.error('[Quick Link Click] Error:', error);
+          // Error
         }
       });
 
@@ -536,15 +518,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // 显示上下文菜单
   function showContextMenu(e, site) {
-    console.log('=== Quick Link Context Menu ===');
-    console.log('Event:', e.type);
-    console.log('Site:', site);
-    
     e.preventDefault();
     // 移除任何已存在的上下文菜单
     const existingMenu = document.querySelector('.custom-context-menu');
     if (existingMenu) {
-      console.log('Removing existing context menu');
       existingMenu.remove();
     }
 

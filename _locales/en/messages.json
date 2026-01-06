@@ -99,17 +99,29 @@
         "message": "Folder deleted: ID=$1, Title=$2",
         "description": "Log message when a folder is deleted"
     },
+    "earlyMorningGreeting": {
+        "message": "Good morning🌅",
+        "description": "Early morning greeting (5-8 AM)"
+    },
     "morningGreeting": {
         "message": "Good morning👋",
-        "description": "早上的问候语"
+        "description": "Morning greeting (8 AM - 12 PM)"
+    },
+    "noonGreeting": {
+        "message": "Good noon☀️",
+        "description": "Noon greeting (12-2 PM)"
     },
     "afternoonGreeting": {
         "message": "Good afternoon👋",
-        "description": "下午的问候语"
+        "description": "Afternoon greeting (2-6 PM)"
     },
     "eveningGreeting": {
-        "message": "Good evening👋",
-        "description": "晚上的问候语"
+        "message": "Good evening🌆",
+        "description": "Evening greeting (6-10 PM)"
+    },
+    "nightGreeting": {
+        "message": "Good night🌙",
+        "description": "Late night greeting (10 PM - 5 AM)"
     },
     "linkCopied": {
         "message": "Link copied to clipboard",
