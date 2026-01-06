@@ -1778,10 +1778,12 @@ function addBreadcrumbClickListeners() {
 
 function navigateToPath(path) {
   const pathParts = path.split(' > ');
-  
+
   // 获取书签栏的名称
   getBookmarksBarName().then(bookmarksBarName => {
-    let currentId = '1'; // 默认从根目录开始
+    // 使用正确的默认书签根 ID
+    const defaultRootId = isFirefox ? 'toolbar_____' : '1';
+    let currentId = defaultRootId; // 默认从根目录开始
     let startIndex = 0;
 
     // 如果路径不是从书签栏开始，我们需要找到正确的起始点
@@ -1804,11 +1806,18 @@ function navigateToPath(path) {
       }
 
       api.bookmarks.getChildren(currentId, function(children) {
+        if (!children || !Array.isArray(children)) {
+          console.warn('navigateRecursive: No children found for', currentId);
+          updateBookmarksDisplay(currentId);
+          return;
+        }
+
         const matchingChild = children.find(child => child.title === pathParts[index]);
         if (matchingChild) {
           currentId = matchingChild.id;
           navigateRecursive(index + 1);
         } else {
+          console.warn('navigateRecursive: No matching child found for', pathParts[index]);
           updateBookmarksDisplay(currentId);
         }
       });
