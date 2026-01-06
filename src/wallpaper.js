@@ -1,7 +1,19 @@
-// 使用通用浏览器API兼容性层
-const { isFirefox, api, sidePanelAPI } = window.BrowserCompat;
-
-document.addEventListener('DOMContentLoaded', () => {
+(function() {
+    'use strict';
+    
+    // 使用通用浏览器API兼容性层
+    // 从全局BrowserCompat对象获取API引用，避免重复声明
+    const isFirefox = typeof window.BrowserCompat !== 'undefined' ?
+        window.BrowserCompat.isFirefox : typeof browser !== 'undefined';
+    const api = typeof window.BrowserCompat !== 'undefined' ?
+        window.BrowserCompat.api : (typeof browser !== 'undefined' ? browser : chrome);
+    const sidePanelAPI = typeof window.BrowserCompat !== 'undefined' ?
+        window.BrowserCompat.sidePanelAPI : {
+            setOptions: () => {},
+            open: () => {}
+        };
+    
+    document.addEventListener('DOMContentLoaded', () => {
     console.log('[Wallpaper] DOMContentLoaded, api:', api, 'isFirefox:', isFirefox);
 
     // 检查 WelcomeManager 是否已经加载
@@ -1177,3 +1189,5 @@ if (document.readyState === 'loading') {
 } else {
     setTimeout(testWallpaperFeatures, 3000); // 延迟执行以确保初始化完成
 }
+
+})();

@@ -3,20 +3,16 @@
     'use strict';
 
     // 使用通用浏览器API兼容性层
-    const { api, sidePanelAPI } = typeof window.BrowserCompat !== 'undefined' ?
-        window.BrowserCompat :
-        {
-            isFirefox: typeof browser !== 'undefined',
-            api: typeof browser !== 'undefined' ? browser : chrome,
-            sidePanelAPI: {
-                setOptions: () => {},
-                open: () => {}
-            }
-        };
-    
-    // 从全局BrowserCompat对象获取isFirefox，如果不存在则检测
+    // 从全局BrowserCompat对象获取API引用，避免重复声明
     const isFirefox = typeof window.BrowserCompat !== 'undefined' ?
         window.BrowserCompat.isFirefox : typeof browser !== 'undefined';
+    const api = typeof window.BrowserCompat !== 'undefined' ?
+        window.BrowserCompat.api : (typeof browser !== 'undefined' ? browser : chrome);
+    const sidePanelAPI = typeof window.BrowserCompat !== 'undefined' ?
+        window.BrowserCompat.sidePanelAPI : {
+            setOptions: () => {},
+            open: () => {}
+        };
 
     document.addEventListener('DOMContentLoaded', function () {
         const yearProgressContainer = document.getElementById('year-progress');
