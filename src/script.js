@@ -3155,13 +3155,15 @@ function displayBookmarkCategories(bookmarkNodes, level, parentUl, parentId) {
       if (hasSubfolders) {
         arrowIcon = document.createElement('span');
         arrowIcon.className = 'material-icons ml-auto';
-        arrowIcon.innerHTML = ICONS.chevron_right;
+        // 如果是根级节点（level为0），显示展开状态的图标
+        arrowIcon.innerHTML = (level === 0) ? ICONS.expand_less : ICONS.chevron_right;
         li.appendChild(arrowIcon);
       }
 
       let sublist = document.createElement('ul');
       sublist.className = 'pl-4 space-y-2';
-      sublist.style.display = 'none';
+      // 如果是根级节点（level为0），默认展开
+      sublist.style.display = (level === 0) ? 'block' : 'none';
 
       li.addEventListener('click', function (event) {
         event.stopPropagation();
