@@ -1,27 +1,17 @@
 /**
  * Firefox favicon 兼容性处理
- * Firefox不支持Chrome的favicon API，需要使用替代方案
+ * Firefox不支持Chrome的favicon API，使用Google Favicon API作为可靠的替代方案
  */
 
-// 获取网站favicon的函数
+// 获取网站favicon的函数 - 使用Google Favicon API（最可靠和稳定）
 function getFaviconUrl(url, size = 32) {
   if (!url) return '';
 
-  // Firefox兼容：使用Google的favicon服务或DuckDuckGo
-  // 优先级：Google Favicon API > DuckDuckGo > 默认图标
   try {
     const domain = new URL(url).hostname;
-
-    // 方案1：Google Favicon API (最可靠)
+    // 使用 Google Favicon API - 这是最可靠和快速的方法
+    // Google 会直接获取网站的高质量 favicon
     const googleFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
-
-    // 方案2：DuckDuckGo Favicon API
-    const ddgFavicon = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-
-    // 方案3：Favicon Grabber
-    const faviconGrabber = `https://favicon.yandex.net/favicon/${domain}`;
-
-    // 返回Google的，最可靠
     return googleFavicon;
   } catch (e) {
     console.error('Error parsing URL for favicon:', e);
@@ -62,20 +52,25 @@ function preloadFavicon(url, size = 32) {
 
 // 为书签创建favicon URL（用于content.js中的兼容）
 function createFaviconURL(bookmarkUrl) {
-  const isFirefox = typeof browser !== 'undefined';
+  // 使用浏览器兼容性层
+  const { isFirefox, api } = window.BrowserCompat || {
+    isFirefox: typeof browser !== 'undefined',
+    api: typeof browser !== 'undefined' ? browser : chrome
+  };
 
   if (isFirefox) {
-    // Firefox使用第三方服务
+    // Firefox: 使用 Google Favicon API
     return getFaviconUrl(bookmarkUrl, 32);
   } else {
-    // Chrome使用内置favicon API
+    // Chrome: 使用内置 _favicon API
     try {
-      const url = new URL(chrome.runtime.getURL("/_favicon/"));
+      const url = new URL(api.runtime.getURL("/_favicon/"));
       url.searchParams.set("pageUrl", bookmarkUrl);
       url.searchParams.set("size", "32");
       return url.toString();
     } catch (e) {
-      // 降级到第三方服务
+      console.error('Chrome favicon API error:', e);
+      // 降级到 Google favicon 服务
       return getFaviconUrl(bookmarkUrl, 32);
     }
   }
@@ -91,3 +86,5 @@ if (typeof module !== 'undefined' && module.exports) {
     createFaviconURL
   };
 }
+
+

@@ -1,32 +1,5 @@
 // 使用通用浏览器API兼容性层
-const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
-  isFirefox: typeof browser !== 'undefined',
-  api: typeof browser !== 'undefined' ? browser : chrome,
-  sidePanelAPI: {
-    setOptions: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.setOptions(options);
-    },
-    open: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.open());
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.open(options);
-    }
-  }
-};
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat;
 
 // 侧边栏导航脚本
 (function() {

@@ -1,44 +1,21 @@
 // Firefox 兼容性层
-const isFirefox = typeof browser !== 'undefined';
-const api = isFirefox ? browser : chrome;
-
-// 适配Firefox的sidebar_action API
-const sidePanelAPI = {
-  setOptions: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.setPanel({ panel: options.path }));
-      }
-      return Promise.resolve();
-    }
-    return api.sidePanel.setOptions(options);
-  },
-  open: (options) => {
-    if (isFirefox) {
-      if (api.sidebarAction) {
-        return Promise.resolve(api.sidebarAction.open());
-      }
-      return Promise.resolve();
-    }
-    return api.sidePanel.open(options);
-  }
-};
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat;
 
 // 获取用户首选语言
 function getUserLanguage() {
-  return chrome.i18n.getUILanguage();
+  return api.i18n.getUILanguage();
 }
 
 window.getLocalizedMessage = function(messageName) {
   const userLang = getUserLanguage();
-  let message = chrome.i18n.getMessage(messageName);
-  
+  let message = api.i18n.getMessage(messageName);
+
   // 如果没有找到消息，直接返回消息名称
   if (!message) {
     // console.warn(`No localized message found for: ${messageName}`); // 日志已移除
     return messageName;
   }
-  
+
   // console.log(`Getting localized message for ${messageName}:`, message); // 日志已移除
   return message;
 };

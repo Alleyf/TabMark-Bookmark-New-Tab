@@ -1,43 +1,18 @@
 // 使用通用浏览器API兼容性层
-const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
-  isFirefox: typeof browser !== 'undefined',
-  api: typeof browser !== 'undefined' ? browser : chrome,
-  sidePanelAPI: {
-    setOptions: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.setOptions(options);
-    },
-    open: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.open());
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.open(options);
-    }
-  }
-};
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Wallpaper] DOMContentLoaded, api:', api, 'isFirefox:', isFirefox);
+
     // 检查 WelcomeManager 是否已经加载
     if (!window.WelcomeManager) {
         console.error('WelcomeManager not found. Make sure welcome.js is loaded before wallpaper.js');
     }
-    
+
     // 延迟创建 WallpaperManager 确保 DOM 完全加载
     setTimeout(() => {
         window.wallpaperManager = new WallpaperManager();
-        
+
         // 确保壁纸列表被加载
         if (window.wallpaperManager && typeof window.wallpaperManager.loadPresetWallpapers === 'function') {
             setTimeout(() => {
@@ -50,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // WallpaperManager 类用于处理所有壁纸相关的操作
 class WallpaperManager {
     constructor() {
+        // 使用全局兼容的API对象
+        this.isFirefox = isFirefox;
+        this.api = api;
+
         // 首先初始化所有必要的属性
         this.wallpaperOptions = document.querySelectorAll('.wallpaper-option');
         this.uploadInput = document.getElementById('upload-wallpaper');
@@ -87,48 +66,57 @@ class WallpaperManager {
 
     // 初始化预设壁纸列表
     initializePresetWallpapers() {
+        console.log('[Wallpaper] initializePresetWallpapers called');
+        console.log('[Wallpaper] api.runtime:', this.api.runtime);
+        console.log('[Wallpaper] api.runtime.getURL:', typeof this.api.runtime.getURL);
+
+        const wallpaper1 = this.api.runtime.getURL('images/wallpapers/wallpaper-1.jpg');
+        console.log('[Wallpaper] Test wallpaper URL:', wallpaper1);
+
         this.presetWallpapers = [
             {
-                url: '../images/wallpapers/wallpaper-1.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-1.jpg'),
                 title: 'Foggy Forest'
             },
             {
-                url: '../images/wallpapers/wallpaper-2.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-2.jpg'),
                 title: 'Mountain Lake'
             },
             {
-                url: '../images/wallpapers/wallpaper-3.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-3.jpg'),
                 title: 'Sunset Beach'
             },
             {
-                url: '../images/wallpapers/wallpaper-4.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-4.jpg'),
                 title: 'City Night'
             },
             {
-                url: '../images/wallpapers/wallpaper-5.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-5.jpg'),
                 title: 'Aurora'
             },
             {
-                url: '../images/wallpapers/wallpaper-6.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-6.jpg'),
                 title: 'Desert Dunes'
             },
             {
-                url: '../images/wallpapers/wallpaper-7.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-7.jpg'),
                 title: 'Mountain View'
             },
             {
-                url: '../images/wallpapers/wallpaper-8.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-8.jpg'),
                 title: 'Forest Lake'
             },
             {
-                url: '../images/wallpapers/wallpaper-9.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-9.jpg'),
                 title: 'Sunset Hills'
             },
             {
-                url: '../images/wallpapers/wallpaper-10.jpg',
+                url: this.api.runtime.getURL('images/wallpapers/wallpaper-10.jpg'),
                 title: 'Ocean View'
             }
         ];
+
+        console.log('Preset wallpapers initialized with URLs:', this.presetWallpapers);
     }
 
     // 修改 loadPresetWallpapers 方法，添加错误处理
@@ -178,7 +166,7 @@ class WallpaperManager {
                 try {
                     const option = this.createWallpaperOption(
                         wallpaper.url,
-                        chrome.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded',
+                        api.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded',
                         true
                     );
                     if (option) {
@@ -407,7 +395,7 @@ class WallpaperManager {
         await this.setRandomPresetWallpaper();
         
         // 使用本地化的成功提示
-        alert(chrome.i18n.getMessage('wallpaperResetSuccess'));
+        alert(api.i18n.getMessage('wallpaperResetSuccess'));
     }
 
     // 清除壁纸样式
@@ -620,7 +608,7 @@ class WallpaperManager {
         };
         reader.onerror = () => {
             console.error('文件读取错误');
-            alert(chrome.i18n.getMessage('fileReadError') || '文件读取失败');
+            alert(api.i18n.getMessage('fileReadError') || '文件读取失败');
         };
         reader.readAsDataURL(file);
         
@@ -631,13 +619,13 @@ class WallpaperManager {
     validateFile(file) {
         if (!file) return false;
         if (!file.type.startsWith('image/')) {
-            alert(chrome.i18n.getMessage('pleaseUploadImage') || '请上传图片文件');
+            alert(api.i18n.getMessage('pleaseUploadImage') || '请上传图片文件');
             return false;
         }
         // 将最大文件大小增加到50MB以支持高质量壁纸
         const maxSize = 50 * 1024 * 1024; // 50MB
         if (file.size > maxSize) {
-            alert((chrome.i18n.getMessage('imageSizeExceeded') || '图片大小不能超过50MB') + ' (当前: ' + (file.size / (1024 * 1024)).toFixed(2) + 'MB)');
+            alert((api.i18n.getMessage('imageSizeExceeded') || '图片大小不能超过50MB') + ' (当前: ' + (file.size / (1024 * 1024)).toFixed(2) + 'MB)');
             return false;
         }
         return true;
@@ -744,10 +732,21 @@ class WallpaperManager {
         option.className = 'wallpaper-option';
         option.dataset.wallpaperUrl = url;
         option.title = title;
-        
+
         // 确保壁纸URL有效
         if (url) {
-            option.style.backgroundImage = `url('${url}')`;
+            // 使用img元素预加载并检查是否成功
+            const img = new Image();
+            img.onload = () => {
+                option.style.backgroundImage = `url('${url}')`;
+                console.log(`Wallpaper loaded successfully: ${url}`);
+            };
+            img.onerror = () => {
+                console.error(`Failed to load wallpaper: ${url}`);
+                option.style.backgroundColor = '#ccc';
+                option.textContent = '加载失败';
+            };
+            img.src = url;
         } else {
             console.error('Invalid wallpaper URL provided:', url);
             return null; // 如果URL无效，返回null
@@ -757,7 +756,7 @@ class WallpaperManager {
         if (isUploaded) {
             const badge = document.createElement('span');
             badge.className = 'uploaded-wallpaper-badge';
-            badge.textContent = chrome.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded';
+            badge.textContent = api.i18n.getMessage('uploadedWallpaperBadge') || 'Uploaded';
             option.appendChild(badge);
         }
 
@@ -885,7 +884,7 @@ class WallpaperManager {
     // 修改 getLocalizedMessage 方法以支持参数
     getLocalizedMessage(key, fallback, substitutions = []) {
         try {
-            const message = chrome.i18n.getMessage(key, substitutions);
+            const message = api.i18n.getMessage(key, substitutions);
             return message || fallback;
         } catch (error) {
             console.warn(`Failed to get localized message for key: ${key}`, error);

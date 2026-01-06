@@ -1,32 +1,5 @@
 // 使用通用浏览器API兼容性层
-const { isFirefox, api, sidePanelAPI } = window.BrowserCompat || {
-  isFirefox: typeof browser !== 'undefined',
-  api: typeof browser !== 'undefined' ? browser : chrome,
-  sidePanelAPI: {
-    setOptions: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.setPanel({ panel: options.path }));
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.setOptions(options);
-    },
-    open: (options) => {
-      const isFF = typeof browser !== 'undefined';
-      const apiFF = isFF ? browser : chrome;
-      if (isFF) {
-        if (apiFF.sidebarAction) {
-          return Promise.resolve(apiFF.sidebarAction.open());
-        }
-        return Promise.resolve();
-      }
-      return apiFF.sidePanel.open(options);
-    }
-  }
-};
+const { isFirefox, api, sidePanelAPI } = window.BrowserCompat;
 
 import { featureTips } from './feature-tips.js';
 import { initGestureNavigation } from './gesture-navigation.js';
@@ -1918,10 +1891,10 @@ function createBookmarkCard(bookmark, index) {
 
   const img = document.createElement('img');
   img.className = 'w-6 h-6 mr-2';
-  // 使用跨浏览器favicon方案
-  img.src = isFirefox 
+  // 使用跨浏览器favicon方案 - 直接使用 Google Favicon API（最可靠）
+  img.src = isFirefox
     ? `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`
-    : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
+    : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
 
   // 尝试从缓存获取颜色
   const cachedColors = localStorage.getItem(`bookmark-colors-${bookmark.id}`);
@@ -3677,8 +3650,7 @@ function setupSpecialLinks() {
 
       const href = this.getAttribute('href');
       let chromeUrl;
-      const isFirefox = typeof browser !== 'undefined';
-      
+
       switch (href) {
         case '#history':
           chromeUrl = isFirefox ? 'about:history' : 'chrome://history';
@@ -3941,7 +3913,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // 更新 favicon URL
     img.src = isFirefox
       ? `https://www.google.com/s2/favicons?domain=${new URL(newUrl).hostname}&sz=32&t=${Date.now()}`
-      : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(newUrl)}&size=32&t=${Date.now()}`;
+      : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(newUrl)}&size=32&t=${Date.now()}`;
     
     img.onload = function () {
       const colors = getColors(img);
@@ -4008,14 +3980,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 100); // 给予一些 DOM 更新
   }
 
-  function getFavicon(url, callback) {
+    function getFavicon(url, callback) {
     const domain = new URL(url).hostname;
 
     api.bookmarks.search({ url: url }, function (results) {
       if (results && results.length > 0) {
         const faviconURL = isFirefox
           ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-          : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
+          : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
         const img = new Image();
         img.onload = function () {
           callback(faviconURL);
@@ -5808,7 +5780,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const domain = new URL(url).hostname;
       const faviconURL = isFirefox
         ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-        : `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
+        : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
       const img = new Image();
       img.onload = function () {
         callback(faviconURL);
@@ -6248,7 +6220,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 获取版本号并设置
 function setVersionNumber() {
-  const manifest = chrome.runtime.getManifest();
+  const manifest = api.runtime.getManifest();
   const versionElement = document.querySelector('.about-version');
   
   if (versionElement && manifest) {
