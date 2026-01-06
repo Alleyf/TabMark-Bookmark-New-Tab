@@ -30,24 +30,35 @@
 
   // 包装每个方法以支持回调
   api.bookmarks.getChildren = function(id, callback) {
+    // 验证参数
+    if (!id) {
+      console.warn('bookmarks.getChildren: invalid id parameter:', id);
+      if (callback) callback([]);
+      return Promise.resolve([]);
+    }
+    
     return originalMethods.getChildren(id).then(result => {
       if (callback) callback(result);
       return result;
     }).catch(error => {
       console.error('bookmarks.getChildren error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
   api.bookmarks.getTree = function(callback) {
     return originalMethods.getTree().then(result => {
-      if (callback) callback(result);
-      return result;
+      // 确保结果是有效的数组
+      const validResult = Array.isArray(result) ? result : [];
+      if (callback) callback(validResult);
+      return validResult;
     }).catch(error => {
       console.error('bookmarks.getTree error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -58,7 +69,8 @@
     }).catch(error => {
       console.error('bookmarks.search error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -69,7 +81,8 @@
     }).catch(error => {
       console.error('bookmarks.get error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -80,7 +93,8 @@
     }).catch(error => {
       console.error('bookmarks.create error:', error);
       if (callback) callback(null);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return null;
     });
   };
 
@@ -91,7 +105,8 @@
     }).catch(error => {
       console.error('bookmarks.update error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -101,7 +116,8 @@
     }).catch(error => {
       console.error('bookmarks.remove error:', error);
       if (callback) callback();
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return;
     });
   };
 
@@ -112,7 +128,8 @@
     }).catch(error => {
       console.error('bookmarks.move error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -140,7 +157,8 @@
     }).catch(error => {
       console.error('storage.local.get error:', error);
       if (callback) callback({});
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return {};
     });
   };
 
@@ -150,7 +168,8 @@
     }).catch(error => {
       console.error('storage.local.set error:', error);
       if (callback) callback();
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return;
     });
   };
 
@@ -160,7 +179,8 @@
     }).catch(error => {
       console.error('storage.local.remove error:', error);
       if (callback) callback();
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return;
     });
   };
 
@@ -170,7 +190,8 @@
     }).catch(error => {
       console.error('storage.local.clear error:', error);
       if (callback) callback();
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return;
     });
   };
 
@@ -190,7 +211,8 @@
     }).catch(error => {
       console.error('tabs.create error:', error);
       if (callback) callback(null);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return null;
     });
   };
 
@@ -201,7 +223,8 @@
     }).catch(error => {
       console.error('tabs.query error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -212,7 +235,8 @@
     }).catch(error => {
       console.error('tabs.update error:', error);
       if (callback) callback([]);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return [];
     });
   };
 
@@ -222,7 +246,8 @@
     }).catch(error => {
       console.error('tabs.remove error:', error);
       if (callback) callback();
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return;
     });
   };
 
@@ -233,7 +258,8 @@
     }).catch(error => {
       console.error('tabs.get error:', error);
       if (callback) callback(null);
-      throw error;
+      // 不再抛出错误，以避免错误传播到调用栈
+      return null;
     });
   };
 

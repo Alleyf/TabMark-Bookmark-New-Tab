@@ -1021,17 +1021,27 @@ const bookmarksCache = {
 function updateBookmarkCards() {
   const bookmarksList = document.getElementById('bookmarks-list');
   const defaultBookmarkId = localStorage.getItem('defaultBookmarkId');
-  const parentId = defaultBookmarkId || bookmarksList.dataset.parentId || '1';
+  const parentId = defaultBookmarkId || bookmarksList?.dataset.parentId || '1';
+  
+  // 验证 parentId 是否有效
+  if (!parentId) {
+    console.warn('updateBookmarkCards: invalid parentId, using default');
+    return;
+  }
 
   api.bookmarks.getChildren(parentId, function (bookmarks) {
-    displayBookmarks({ id: parentId, children: bookmarks });
+    // 确保 bookmarks 是有效的数组
+    const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+    displayBookmarks({ id: parentId, children: validBookmarks });
 
     // 在显示书签后更新默认书签指示器
     updateDefaultBookmarkIndicator();
     updateSidebarDefaultBookmarkIndicator();
 
     // 更新 bookmarks-list 的 data-parent-id
-    bookmarksList.dataset.parentId = parentId;
+    if (bookmarksList) {
+      bookmarksList.dataset.parentId = parentId;
+    }
   });
 }
 
@@ -1411,6 +1421,15 @@ async function initDefaultFoldersTabs() {
 
   // 只调用一次更新书签树
   api.bookmarks.getTree(function (nodes) {
+    // 验证 nodes 是否有效
+    if (!nodes || !Array.isArray(nodes) || nodes.length === 0 || !nodes[0] || !nodes[0].children) {
+      console.warn('Invalid bookmark tree data:', nodes);
+      // 使用空数组作为默认值
+      bookmarkTreeNodes = [{ children: [] }];
+      displayBookmarkCategories([], 0, null, '1');
+      return;
+    }
+    
     bookmarkTreeNodes = nodes;
     displayBookmarkCategories(bookmarkTreeNodes[0].children, 0, null, '1');
   });
@@ -1787,7 +1806,8 @@ function navigateToPath(path) {
 function displayBookmarks(bookmark) {
   const bookmarksList = document.getElementById('bookmarks-list');
   const bookmarksContainer = document.querySelector('.bookmarks-container');
-  if (!bookmarksList) {
+  if (!bookmarksList || !bookmark) {
+    console.warn('displayBookmarks: invalid parameters', { bookmarksList, bookmark });
     return;
   }
 
@@ -1796,7 +1816,14 @@ function displayBookmarks(bookmark) {
   
   const fragment = document.createDocumentFragment();
   
-  let itemsToDisplay = bookmark.children || [];
+  // 安全地获取 children 数组
+  let itemsToDisplay = Array.isArray(bookmark.children) ? bookmark.children : [];
+  
+  // 确保所有项目都有有效的 index 属性
+  itemsToDisplay = itemsToDisplay.map(item => ({
+    ...item,
+    index: typeof item.index !== 'undefined' ? item.index : 0
+  }));
   
   itemsToDisplay.sort((a, b) => a.index - b.index);
   
@@ -3134,8 +3161,13 @@ function displayBookmarkCategories(bookmarkNodes, level, parentUl, parentId) {
     categoriesList.style.display = 'block';
   }
 
-  bookmarkNodes.forEach(function (bookmark) {
-    if (bookmark.children && bookmark.children.length > 0) {
+  // 过滤掉无效的书签节点
+  const validBookmarkNodes = Array.isArray(bookmarkNodes) ? 
+    bookmarkNodes.filter(node => node && typeof node === 'object') : [];
+    
+  validBookmarkNodes.forEach(function (bookmark) {
+    // 验证书签对象及其children属性
+    if (bookmark.children && Array.isArray(bookmark.children) && bookmark.children.length > 0) {
       let li = document.createElement('li');
       li.className = 'cursor-pointer p-2 hover:bg-emerald-500 rounded-lg flex items-center folder-item';
       li.style.paddingLeft = `${(level * 20) + 8}px`;
@@ -3150,7 +3182,11 @@ function displayBookmarkCategories(bookmarkNodes, level, parentUl, parentId) {
       folderIcon.innerHTML = ICONS.folder;
       li.insertBefore(folderIcon, li.firstChild);
 
-      const hasSubfolders = bookmark.children.some(child => child.children);
+      // 安全地检查是否有子文件夹
+      const validChildren = Array.isArray(bookmark.children) ? 
+        bookmark.children.filter(child => child && typeof child === 'object') : [];
+      const hasSubfolders = validChildren.some(child => child.children && Array.isArray(child.children) && child.children.length > 0);
+      
       let arrowIcon;
       if (hasSubfolders) {
         arrowIcon = document.createElement('span');
@@ -3185,7 +3221,8 @@ function displayBookmarkCategories(bookmarkNodes, level, parentUl, parentId) {
       categoriesList.appendChild(li);
       categoriesList.appendChild(sublist);
 
-      displayBookmarkCategories(bookmark.children, level + 1, sublist, bookmark.id);
+      // 递归调用时确保传递有效的children数组
+      displayBookmarkCategories(validChildren, level + 1, sublist, bookmark.id);
     }
   });
 
