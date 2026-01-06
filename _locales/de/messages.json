@@ -35,10 +35,6 @@
         "message": "Abbrechen",
         "description": "Text für die Schaltfläche zum Abbrechen"
     },
-    "confirmDeleteMessage": {
-        "message": "Sind Sie sicher, dass Sie \"$1\" löschen möchten?",
-        "description": "Nachricht zur Bestätigung der Löschung eines Elements"
-    },
     "confirmDeleteButton": {
         "message": "Löschen",
         "description": "Text für die Schaltfläche zur Bestätigung der Löschung"

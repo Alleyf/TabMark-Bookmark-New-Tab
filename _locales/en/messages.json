@@ -35,10 +35,6 @@
         "message": "Cancel",
         "description": "Text for the cancel button"
     },
-    "confirmDeleteMessage": {
-        "message": "Are you sure you want to delete \"$1\"?",
-        "description": "Message to confirm deletion of an item"
-    },
     "confirmDeleteButton": {
         "message": "Delete",
         "description": "Text for the confirm delete button"
@@ -102,10 +98,6 @@
     "folderDeleted": {
         "message": "Folder deleted: ID=$1, Title=$2",
         "description": "Log message when a folder is deleted"
-    },
-    "confirmDeleteMessage": {
-        "message": "Are you sure you want to delete \"$1\"?",
-        "description": "Confirmation message for deleting an item"
     },
     "morningGreeting": {
         "message": "Good morning👋",
@@ -456,10 +448,6 @@
     "linkOpeningDescription": {
         "message": "Set how bookmarks and quick links are opened when clicked on the main page.",
         "description": "Description of link opening settings"
-    },
-    "openInNewTab": {
-        "message": "Open in new tab",
-        "description": "Option to open links in new tab"
     },
     "sidebarFeaturesFeature": {
         "message": "Two new features added:\n1. Quick Sidebar:\nPress Alt/Command + B on any webpage to open the sidebar for quick access to bookmarks and search features.\n\n2. Link Opening Settings:\nCustomize how bookmarks and quick links are opened in settings, with the option to open in new tabs.",

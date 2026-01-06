@@ -35,10 +35,6 @@
         "message": "Annuler",
         "description": "Texte pour le bouton d'annulation"
     },
-    "confirmDeleteMessage": {
-        "message": "Êtes-vous sûr de vouloir supprimer \"$1\" ?",
-        "description": "Message de confirmation de suppression d'un élément"
-    },
     "confirmDeleteButton": {
         "message": "Supprimer",
         "description": "Texte pour le bouton de confirmation de suppression"

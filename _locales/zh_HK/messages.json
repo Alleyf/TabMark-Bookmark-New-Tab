@@ -35,10 +35,6 @@
         "message": "取消",
         "description": "取消按鈕的文本"
     },
-    "confirmDeleteMessage": {
-        "message": "您確定要刪除 \"$1\" 嗎？",
-        "description": "確認刪除項目的消息"
-    },
     "confirmDeleteButton": {
         "message": "刪除",
         "description": "確認刪除按鈕的文本"
@@ -215,34 +211,6 @@
         "message": "更多搜尋支援即將推出",
         "description": "更多搜尋支援提示"
     },
-    "settingsTitle": {
-        "message": "設置",
-        "description": "設置標題"
-    },
-    "appearanceTab": {
-        "message": "外觀",
-        "description": "外觀設置標籤"
-    },
-    "floatingBallTab": {
-        "message": "懸浮球",
-        "description": "懸浮球設置標籤"
-    },
-    "backgroundColorTitle": {
-        "message": "背景顏色",
-        "description": "背景顏色設置標題"
-    },
-    "floatingBallSettingsTitle": {
-        "message": "懸浮球設置",
-        "description": "懸浮球設置標題"
-    },
-    "floatingBallDescription": {
-        "message": "開啟懸浮球後會在頁面右上角顯示一個可點擊的懸浮圖標，用於快速訪問搜尋引擎和書籤。",
-        "description": "懸浮球功能描述"
-    },
-    "enableFloatingBall": {
-        "message": "啟用懸浮球",
-        "description": "啟用懸浮球選項"
-    },
     "historyLinkTitle": {
         "message": "歷史記錄",
         "description": "歷史記錄連結標題"
@@ -254,14 +222,6 @@
     "passwordsLinkTitle": {
         "message": "密碼",
         "description": "密碼連結標題"
-    },
-    "extensionsLinkTitle": {
-        "message": "擴展",
-        "description": "擴展連結標題"
-    },
-    "settingsLinkTitle": {
-        "message": "設置",
-        "description": "設置連結標題"
     },
     "confirmDeleteQuickLinkMessage": {
         "message": "您確定要刪除快捷連結 \"$1\" 嗎？該連結將不會出現在快速連結列表中。",

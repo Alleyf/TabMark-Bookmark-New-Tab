@@ -35,10 +35,6 @@
         "message": "Cancelar",
         "description": "Texto para el botón de cancelar"
     },
-    "confirmDeleteMessage": {
-        "message": "¿Estás seguro de que deseas eliminar \"$1\"?",
-        "description": "Mensaje para confirmar la eliminación de un elemento"
-    },
     "confirmDeleteButton": {
         "message": "Eliminar",
         "description": "Texto para el botón de confirmación de eliminación"
