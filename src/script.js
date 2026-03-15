@@ -33,8 +33,90 @@ import { ICONS } from './icons.js';
 
 // 鼠标侧键导航相关变量
 let mouseNavigationEnabled = true;  // 是否启用鼠标侧键导航
+let navBackStack = [];
+let navForwardStack = [];
+let currentNavFolderId = null;
 const mouseNavigationCooldown = 300;  // 导航冷却时间（毫秒）
 let lastMouseNavigationTime = 0;  // 上次鼠标导航时间
+let isProgrammaticNavigation = false;
+
+// 记录文件夹切换历史（供侧键导航使用）
+function saveToNavigationHistory(folderId) {
+  if (!folderId) return;
+
+  // 程序化导航（侧键前进/后退）不打断前进栈
+  if (isProgrammaticNavigation) {
+    currentNavFolderId = folderId;
+    return;
+  }
+
+  if (currentNavFolderId === null) {
+    currentNavFolderId = folderId;
+    return;
+  }
+
+  if (currentNavFolderId !== folderId) {
+    navBackStack.push(currentNavFolderId);
+    currentNavFolderId = folderId;
+    navForwardStack = [];
+  }
+}
+
+// 鼠标后退：进入父文件夹，并记录可前进的当前文件夹
+async function navigateToParentFolder() {
+  const bookmarksList = document.getElementById('bookmarks-list');
+  const currentFolderId = bookmarksList?.dataset.parentId;
+
+  if (!currentFolderId || currentFolderId === '1' || currentFolderId === '0') {
+    return;
+  }
+
+  try {
+    const results = await api.bookmarks.get(currentFolderId);
+    const parentId = results?.[0]?.parentId;
+    if (!parentId) return;
+
+    if (currentNavFolderId === null) {
+      currentNavFolderId = currentFolderId;
+    }
+    if (currentNavFolderId && navForwardStack[navForwardStack.length - 1] !== currentNavFolderId) {
+      navForwardStack.push(currentNavFolderId);
+    }
+
+    isProgrammaticNavigation = true;
+    if (window.updateBookmarksDisplay) {
+      await window.updateBookmarksDisplay(parentId);
+    } else {
+      updateBookmarkCards();
+    }
+  } catch (error) {
+    console.error('[Mouse Navigation] navigateToParentFolder failed:', error);
+  } finally {
+    isProgrammaticNavigation = false;
+  }
+}
+
+// 鼠标前进：回到刚才后退前所在的文件夹
+async function navigateToChildFolder() {
+  const nextFolderId = navForwardStack.pop();
+  if (!nextFolderId) return;
+
+  try {
+    if (currentNavFolderId) {
+      navBackStack.push(currentNavFolderId);
+    }
+    isProgrammaticNavigation = true;
+    if (window.updateBookmarksDisplay) {
+      await window.updateBookmarksDisplay(nextFolderId);
+    } else {
+      updateBookmarkCards();
+    }
+  } catch (error) {
+    console.error('[Mouse Navigation] navigateToChildFolder failed:', error);
+  } finally {
+    isProgrammaticNavigation = false;
+  }
+}
 
 // 解决函数未定义错误，将这些函数提升到全局范围
 // 创建二维码函数
@@ -640,37 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Error initializing search engine:', e);
   }
 
-  // 添加鼠标快捷键功能 - 鼠标侧键前进后退
-  document.addEventListener('mousedown', function(event) {
-    // 检测鼠标侧键（后退键为4，前进键为5）
-    if (event.button === 3) { // 鼠标后退键
-      event.preventDefault();
-      console.log('[Mouse Navigation] Back button pressed');
-      
-      // 发送后退消息到背景脚本
-      api.runtime.sendMessage({ action: 'navigateBack' })
-        .catch(error => {
-          console.log('Error sending navigateBack message:', error);
-          // 如果扩展API不可用，尝试使用history.back()
-          if (window.history.length > 1) {
-            window.history.back();
-          }
-        });
-    } else if (event.button === 4) { // 鼠标前进键
-      event.preventDefault();
-      console.log('[Mouse Navigation] Forward button pressed');
-      
-      // 发送前进消息到背景脚本
-      api.runtime.sendMessage({ action: 'navigateForward' })
-        .catch(error => {
-          console.log('Error sending navigateForward message:', error);
-          // 如果扩展API不可用，尝试使用history.forward()
-          if (window.history.length > 1) {
-            window.history.forward();
-          }
-        });
-    }
-  });
+  // 鼠标侧键导航由 initMouseSideButtonNavigation 统一初始化，避免重复绑定
 
   // 加载保存的背景颜色
   const savedBg = localStorage.getItem('selectedBackground');
@@ -1049,12 +1101,17 @@ function updateBookmarkCards() {
     if (bookmarksList) {
       bookmarksList.dataset.parentId = parentId;
     }
+    
+    // 保存到导航历史
+    saveToNavigationHistory(parentId);
   }).catch(error => {
     console.error('updateBookmarkCards: Failed to get bookmarks for parentId:', parentId, error);
     // 尝试获取默认书签工具栏
     api.bookmarks.getChildren(firefoxDefaultId).then(bookmarks => {
       const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
       displayBookmarks({ id: firefoxDefaultId, children: validBookmarks });
+      // 保存到导航历史
+      saveToNavigationHistory(firefoxDefaultId);
     }).catch(e => {
       console.error('Failed to get toolbar bookmarks:', e);
       // 最后的降级方案：显示空状态
@@ -1076,6 +1133,11 @@ document.addEventListener('DOMContentLoaded', function () {
   let bookmarkTreeNodes = []; // 定义全局变量
   // 调用 updateBookmarkCards
   updateBookmarkCards();
+  // 兜底：确保根目录书签默认可见
+  const __bookmarksList = document.getElementById('bookmarks-list');
+  if (__bookmarksList && !__bookmarksList.dataset.parentId) {
+    __bookmarksList.dataset.parentId = '1';
+  }
   
   updateSearchEngineIcon(defaultSearchEngine);
 
@@ -1101,11 +1163,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   
   // 优化后的更新显示函数
-  async function updateBookmarksDisplay(parentId) {
+  async function updateBookmarksDisplay(parentId, movedItemId = null) {
     const bookmarksContainer = document.querySelector('.bookmarks-container');
     
     // 添加加载状态
     bookmarksContainer.classList.add('loading');
+    
+    // 保存到导航历史
+    saveToNavigationHistory(parentId);
     
     try {
       const cached = bookmarksCache.get(parentId);
@@ -1497,16 +1562,31 @@ function initWheelSwitching() {
   let wheelEventListener = null;
   let isEnabled = false; // 默认禁用
   
-  // 创建滚轮事件处理函数
+// 创建滚轮事件处理函数
   const wheelHandler = async (event) => {
     // 如果功能被禁用，直接返回
     if (!isEnabled) return;
     
-    // 检查是否在搜索相关元素内滚动
-    if (event.target.closest('#bookmarks-list') || 
-        event.target.closest('.search-form') || 
-        event.target.closest('.search-suggestions') ||
-        event.target.closest('.search-suggestions-wrapper')) {
+    // 检查是否在应该阻止滚轮切换的区域内滚动
+    const blockedElements = [
+      '#bookmarks-list',        // 书签列表区域
+      '.search-form',           // 搜索表单
+      '.search-suggestions',    // 搜索建议
+      '.search-suggestions-wrapper', // 搜索建议包装器
+      '.quick-links-container', // 快速链接容器
+      '.settings-modal',        // 设置模态框
+      '.modal-overlay',        // 模态框遮罩
+      '.context-menu',         // 右键菜单
+      '.dropdown-menu'         // 下拉菜单
+    ];
+    
+    // 如果滚动目标在任何被阻止的元素内，则不触发滚轮切换
+    if (blockedElements.some(selector => event.target.closest(selector))) {
+      return;
+    }
+    
+    // 额外检查：确保在 main 元素内（只在主内容区域生效）
+    if (!event.target.closest('main')) {
       return;
     }
 
@@ -1552,16 +1632,21 @@ function initWheelSwitching() {
         // 找到对应顺序的文件夹并切换
         const nextFolder = defaultFolders.find(f => f.order === nextOrder);
         if (nextFolder) {
+          console.log('Wheel switching to folder:', nextFolder.title);
           await switchToFolder(nextFolder.id);
           
           // 添加切换动画效果
           const tabs = document.querySelectorAll('.folder-tab');
           tabs.forEach(tab => {
+            // 重置所有标签的样式
+            tab.style.transition = 'transform 0.3s ease';
+            
             if (tab.dataset.folderId === nextFolder.id) {
               tab.classList.add('switching');
               tab.style.transform = 'scale(1.2)';
               setTimeout(() => {
                 tab.classList.remove('switching');
+                tab.style.transform = 'scale(1)';
               }, 1500);
             } else {
               tab.style.transform = 'scale(1)';
@@ -1579,31 +1664,43 @@ function initWheelSwitching() {
     }, 50); // 50ms 的防抖延迟
   };
   
-  // 添加或移除事件监听器的函数
+// 添加或移除事件监听器的函数
   const updateWheelListener = (enabled) => {
+    console.log('Updating wheel listener, enabled:', enabled);
     if (enabled) {
       if (!wheelEventListener) {
         main.addEventListener('wheel', wheelHandler, { passive: true });
         wheelEventListener = wheelHandler;
+        console.log('Wheel listener added');
       }
     } else {
       if (wheelEventListener) {
         main.removeEventListener('wheel', wheelEventListener);
         wheelEventListener = null;
+        console.log('Wheel listener removed');
       }
     }
   };
   
-  // 检查设置并初始化
+// 检查设置并初始化
   api.storage.sync.get({ enableWheelSwitching: false }, (result) => {
     isEnabled = result.enableWheelSwitching;
+    console.log('Wheel switching enabled:', isEnabled);
     updateWheelListener(isEnabled);
   });
   
-  // 监听设置变化
+// 监听设置变化
   document.addEventListener('wheelSwitchingChanged', (event) => {
-    isEnabled = event.detail.enabled;
+    isEnabled = event.detail?.enabled || false;  // 安全访问detail属性
+    console.log('Wheel switching setting changed:', isEnabled);
     updateWheelListener(isEnabled);
+    
+    // 可选：添加视觉反馈
+    if (isEnabled) {
+      document.body.classList.add('wheel-switching-enabled');
+    } else {
+      document.body.classList.remove('wheel-switching-enabled');
+    }
   });
 }
 
@@ -1945,10 +2042,26 @@ function createBookmarkCard(bookmark, index) {
 
   const img = document.createElement('img');
   img.className = 'w-6 h-6 mr-2';
-  // 使用跨浏览器favicon方案 - 直接使用 Google Favicon API（最可靠）
-  img.src = isFirefox
-    ? `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`
-    : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
+  // 使用跨浏览器favicon方案：Firefox 走国内可用候选源自动回退，Chromium 走内置 _favicon
+  if (isFirefox && typeof window.setFaviconWithFallback === 'function') {
+    window.setFaviconWithFallback(img, bookmark.url, 32);
+  } else if (isFirefox && typeof window.getFaviconCandidates === 'function') {
+    const candidates = window.getFaviconCandidates(bookmark.url, 32);
+    let iconIndex = 0;
+    img.src = candidates[iconIndex] || '';
+    img.onerror = function () {
+      iconIndex += 1;
+      if (iconIndex < candidates.length) {
+        img.src = candidates[iconIndex];
+      } else {
+        const defaultColors = { primary: [200, 200, 200], secondary: [220, 220, 220] };
+        applyColors(card, defaultColors);
+        localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(defaultColors));
+      }
+    };
+  } else {
+    img.src = `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
+  }
 
   // 尝试从缓存获取颜色
   const cachedColors = localStorage.getItem(`bookmark-colors-${bookmark.id}`);
@@ -1969,12 +2082,14 @@ function createBookmarkCard(bookmark, index) {
     };
   }
 
-  img.onerror = function() {
-    // 处 favicon 加载失败的情况
-    const defaultColors = { primary: [200, 200, 200], secondary: [220, 220, 220] };
-    applyColors(card, defaultColors);
-    localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(defaultColors));
-  };
+  if (!img.onerror) {
+    img.onerror = function() {
+      // 处理 favicon 加载失败的情况
+      const defaultColors = { primary: [200, 200, 200], secondary: [220, 220, 220] };
+      applyColors(card, defaultColors);
+      localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(defaultColors));
+    };
+  }
 
   const favicon = document.createElement('div');
   favicon.className = 'favicon';
@@ -3677,7 +3792,37 @@ function setupSpecialLinks() {
           return;
       }
 
-      try {
+try {
+        // 检查URL是否合法，避免 about: 页面等受限制的URL
+        if (chromeUrl.startsWith('about:') && !['about:blank', 'about:newtab'].includes(chromeUrl)) {
+          console.warn('Cannot open restricted about: URL:', chromeUrl);
+          // 对于受限制的URL，提供替代方案
+          if (isFirefox) {
+            let manualInstruction = '';
+            switch (chromeUrl) {
+              case 'about:addons':
+                manualInstruction = 'Please open Firefox Add-ons page manually by typing about:addons in the address bar';
+                break;
+              case 'about:logins':
+                manualInstruction = 'Please open Firefox Password Manager manually by typing about:logins in the address bar';
+                break;
+              case 'about:downloads':
+                manualInstruction = 'Please open Firefox Downloads manually by typing about:downloads in the address bar';
+                break;
+              case 'about:history':
+                manualInstruction = 'Please open Firefox History manually by typing about:history in the address bar (or press Ctrl+H)';
+                break;
+              default:
+                manualInstruction = `Please open this Firefox page manually by typing ${chromeUrl} in the address bar`;
+            }
+            console.info(manualInstruction);
+            // 显示提示给用户
+            alert(manualInstruction);
+          }
+          isProcessingClick = false;
+          return;
+        }
+        
         // 直接使用 api.tabs.create 打开新标签页
         api.tabs.create({ url: chromeUrl }, (tab) => {
           if (api.runtime.lastError) {
@@ -6487,71 +6632,43 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 初始化鼠标侧键导航功能
   initMouseSideButtonNavigation();
+
+  // 启动兜底：若尚未设置当前目录，默认切到根目录，确保有内容
+  const list = document.getElementById('bookmarks-list');
+  if (list && !list.dataset.parentId && typeof window.updateBookmarksDisplay === 'function') {
+    window.updateBookmarksDisplay('1');
+  }
+
+  // 暴露稳定的更新入口，供侧键导航与其他模块调用
+  if (typeof window.updateBookmarksDisplay !== 'function') {
+    window.updateBookmarksDisplay = updateBookmarksDisplay;
+  }
 });
 
 // 鼠标侧键导航功能
 function initMouseSideButtonNavigation() {
-  // 监听鼠标按下事件
-  document.addEventListener('mousedown', function(event) {
+  document.addEventListener('mousedown', async function(event) {
     // 检查是否启用了鼠标侧键导航
     if (!mouseNavigationEnabled) return;
-    
+
     // 检查是否在导航冷却时间内
     const now = Date.now();
     if (now - lastMouseNavigationTime < mouseNavigationCooldown) return;
-    
-    // 鼠标侧键检测：标准的button值是3（后退）和4（前进）
-    // 但实际实现中，后退通常是4，前进是5（在buttons属性中）
-    // 为了兼容性，同时检查event.button和event.buttons
-    if (event.button === 3 || (event.buttons & 4)) { // 鼠标后退键
-      event.preventDefault();
-      try {
-        // 使用浏览器API后退
-        window.history.back();
-        lastMouseNavigationTime = now;
-      } catch (e) {
-        console.error('鼠标后退失败:', e);
-      }
-    } else if (event.button === 4 || (event.buttons & 8)) { // 鼠标前进键
-      event.preventDefault();
-      try {
-        // 使用浏览器API前进
-        window.history.forward();
-        lastMouseNavigationTime = now;
-      } catch (e) {
-        console.error('鼠标前进失败:', e);
-      }
-    }
-  });
-  
-  // 也可以监听mouseup事件作为备用
-  document.addEventListener('mouseup', function(event) {
-    // 检查是否启用了鼠标侧键导航
-    if (!mouseNavigationEnabled) return;
-    
-    // 检查是否在导航冷却时间内
-    const now = Date.now();
-    if (now - lastMouseNavigationTime < mouseNavigationCooldown) return;
-    
-    // 有些浏览器可能需要在mouseup事件中处理侧键
-    if (event.button === 3 || (event.buttons & 4)) { // 鼠标后退键
-      event.preventDefault();
-      try {
-        // 使用浏览器API后退
-        window.history.back();
-        lastMouseNavigationTime = now;
-      } catch (e) {
-        console.error('鼠标后退失败:', e);
-      }
-    } else if (event.button === 4 || (event.buttons & 8)) { // 鼠标前进键
-      event.preventDefault();
-      try {
-        // 使用浏览器API前进
-        window.history.forward();
-        lastMouseNavigationTime = now;
-      } catch (e) {
-        console.error('鼠标前进失败:', e);
-      }
+
+    // 鼠标侧键检测：标准上 button=3(后退), button=4(前进)
+    const isBackButton = event.button === 3;
+    const isForwardButton = event.button === 4;
+
+    if (!isBackButton && !isForwardButton) return;
+
+    event.preventDefault();
+
+    if (isBackButton) {
+      await navigateToParentFolder();
+      lastMouseNavigationTime = now;
+    } else if (isForwardButton) {
+      await navigateToChildFolder();
+      lastMouseNavigationTime = now;
     }
   });
 }
