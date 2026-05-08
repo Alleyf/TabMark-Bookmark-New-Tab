@@ -1088,8 +1088,23 @@ function updateBookmarkCards() {
     return;
   }
 
+  function handleBookmarksResult(bookmarks, id) {
+    const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+    displayBookmarks({ id: id, children: validBookmarks });
+    saveToNavigationHistory(id);
+  }
+
   api.bookmarks.getChildren(parentId, function (bookmarks) {
-    // 确保 bookmarks 是有效的数组
+    // Chrome 回调API: 通过 runtime.lastError 检测错误
+    if (api.runtime && api.runtime.lastError) {
+      console.error('updateBookmarkCards: Failed to get bookmarks for parentId:', parentId, api.runtime.lastError);
+      // 降级：尝试获取默认书签工具栏
+      api.bookmarks.getChildren(firefoxDefaultId, function (fallbackBookmarks) {
+        handleBookmarksResult(fallbackBookmarks, firefoxDefaultId);
+      });
+      return;
+    }
+
     const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
     displayBookmarks({ id: parentId, children: validBookmarks });
 
@@ -1101,22 +1116,9 @@ function updateBookmarkCards() {
     if (bookmarksList) {
       bookmarksList.dataset.parentId = parentId;
     }
-    
+
     // 保存到导航历史
     saveToNavigationHistory(parentId);
-  }).catch(error => {
-    console.error('updateBookmarkCards: Failed to get bookmarks for parentId:', parentId, error);
-    // 尝试获取默认书签工具栏
-    api.bookmarks.getChildren(firefoxDefaultId).then(bookmarks => {
-      const validBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
-      displayBookmarks({ id: firefoxDefaultId, children: validBookmarks });
-      // 保存到导航历史
-      saveToNavigationHistory(firefoxDefaultId);
-    }).catch(e => {
-      console.error('Failed to get toolbar bookmarks:', e);
-      // 最后的降级方案：显示空状态
-      displayBookmarks({ id: parentId, children: [] });
-    });
   });
 }
 
