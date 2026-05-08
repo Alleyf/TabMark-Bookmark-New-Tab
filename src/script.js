@@ -39,6 +39,7 @@ let currentNavFolderId = null;
 const mouseNavigationCooldown = 300;  // 导航冷却时间（毫秒）
 let lastMouseNavigationTime = 0;  // 上次鼠标导航时间
 let isProgrammaticNavigation = false;
+let wheelSwitchingInitialized = false; // 防止重复初始化滚轮切换
 
 // 记录文件夹切换历史（供侧键导航使用）
 function saveToNavigationHistory(folderId) {
@@ -1545,9 +1546,6 @@ async function initDefaultFoldersTabs() {
     await switchToFolder('1'); // '1' 是根文件夹的 ID
   }
 
-  // 重新初始化滚轮切换功能
-  initWheelSwitching();
-
   // 更新显示状态
   updateDefaultFoldersTabsVisibility();
 
@@ -1556,6 +1554,10 @@ async function initDefaultFoldersTabs() {
 
 // 修改滚轮切换功能的实现
 function initWheelSwitching() {
+  // 防止重复初始化：避免每次 initDefaultFoldersTabs 都添加新监听器
+  if (wheelSwitchingInitialized) return;
+  wheelSwitchingInitialized = true;
+
   const main = document.querySelector('main');
   if (!main) return;
 
@@ -6634,6 +6636,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 初始化鼠标侧键导航功能
   initMouseSideButtonNavigation();
+
+  // 初始化滚轮切换文件夹功能（只会执行一次）
+  initWheelSwitching();
 
   // 启动兜底：若尚未设置当前目录，默认切到根目录，确保有内容
   const list = document.getElementById('bookmarks-list');
