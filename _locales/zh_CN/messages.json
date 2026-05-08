@@ -879,5 +879,9 @@
     "bingWallpapersTitle": {
         "message": "必应壁纸",
         "description": "必应壁纸标题"
+    },
+    "settingsTitle": {
+        "message": "扩展设置",
+        "description": "设置面板标题"
     }
 }

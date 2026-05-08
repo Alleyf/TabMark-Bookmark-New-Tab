@@ -337,15 +337,8 @@ main.flex-1 {
 [data-theme="dark"] .settings-modal-title {
   color: #ffffff;
 }
-[data-theme="dark"] .settings-tab-button {
-  color: #ffffff;
-}
-[data-theme="dark"] .settings-modal-subtitle {
-  color: #ffffff;
-}
-
-
-.welcome-guide {
+/* 引导页样式 */
+.welcome-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -357,6 +350,7 @@ main.flex-1 {
   justify-content: center;
   z-index: 1000;
 }
+
 
 .welcome-content {
   background: white;
@@ -727,8 +721,68 @@ main {
 }
 [data-theme="dark"] .settings-sidebar {
   background-color: #1c1c1c;
-  box-shadow: -1px 0 5px rgba(0, 0, 0, 0.05); /* 减轻阴影 */
-  border-left: 1px solid #404040; /* 添加左边框 */
+  box-shadow: -1px 0 5px rgba(0, 0, 0, 0.2);
+  border-left: 1px solid #333;
+}
+
+[data-theme="dark"] .settings-sidebar-header {
+  border-bottom: 1px solid #333;
+}
+
+[data-theme="dark"] .settings-sidebar-close {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .settings-sidebar-close:hover {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .settings-sidebar-nav {
+  border-right-color: #333;
+}
+
+[data-theme="dark"] .settings-tab-button {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .settings-tab-button:hover {
+  background-color: #2d2d2d;
+  color: #10b981;
+}
+
+[data-theme="dark"] .settings-tab-button.active {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .settings-modal-title,
+[data-theme="dark"] .settings-modal-subtitle,
+[data-theme="dark"] .settings-section-title,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4 {
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .settings-description,
+[data-theme="dark"] .settings-tab-content p {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .switch-label {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .slider {
+  background-color: #4b5563 !important;
+}
+
+[data-theme="dark"] input:checked + .slider {
+  background-color: #10b981 !important;
+}
+
+[data-theme="dark"] .preview-text,
+[data-theme="dark"] .width-preview {
+  color: #9ca3af;
 }
 /* 暗色模式适配 */
 [data-theme="dark"] .official-website a {
@@ -933,45 +987,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: #10b981;
 }
 
-/* 暗色模式适配 */
-[data-theme="dark"] .layout-settings-container {
-  background: #1f2937;
-}
-
-[data-theme="dark"] .layout-settings-title {
-  color: #e5e7eb;
-}
-
-[data-theme="dark"] .layout-settings-description {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .bookmark-width-settings {
-  background: #374151;
-}
-
-[data-theme="dark"] .width-slider {
-  background: #374151;
-}
-
-[data-theme="dark"] .width-value-display {
-  color: #e5e7eb;
-  background: #4b5563;
-}
-
-[data-theme="dark"] input[type="range"] {
-  background: #ffffff;
-}
-
-[data-theme="dark"] .width-preview {
-  color: #9ca3af;
-}
-
-/* 暗色模式适配 */
-[data-theme="dark"] .floating-width-settings {
-  background: #1f2937;
-  color: #e5e7eb;
-}
+/* 设置面板样式统一处理已在上部完成 */
 
 /* 当显示浮动卡片时移除模糊效果 */
 .settings-modal-content.no-blur {
@@ -1318,26 +1334,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
-/* 设置面板暗色模式适配 */
-[data-theme="dark"] .settings-description {
-  color: #9ca3af;
-}
-
-[data-theme="dark"] .switch-label {
-  color: #e5e7eb;
-}
-
-[data-theme="dark"] .slider {
-  background-color: #6b7280 !important;
-}
-
-[data-theme="dark"] .setting-option {
-  color: #e5e7eb;
-}
-
-[data-theme="dark"] .settings-tab-content p {
-  color: #9ca3af;
-}
+/* 设置面板样式统一处理 */
 
 [data-theme="dark"] .settings-layout select,
 [data-theme="dark"] .settings-layout input[type="text"],
@@ -1353,13 +1350,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   outline: none;
 }
 
-[data-theme="dark"] .settings-tab-button:hover {
-  background-color: #374151;
-}
-
-[data-theme="dark"] .settings-tab-button.active:hover {
-  background-color: #10b981;
-}
+/* 设置面板内容区域 */
 
 [data-theme="dark"] .bing-wallpaper-item {
   background-color: #2d2d2d;
@@ -1543,15 +1534,6 @@ body .default-folders-tabs.sidebar-expanded {
   background-color: #f0f0f0;
 }
 
-/* 暗色模式适配 */
-[data-theme="dark"] .interface-elements-settings .setting-option {
-  background-color: #2d2d2d;
-}
-
-[data-theme="dark"] .interface-elements-settings .setting-option:hover {
-  background-color: #363636;
-}
-
 /* 搜索设置面板样式 */
 .search-suggestions-settings {
   background: #f8f9fa;
@@ -1567,18 +1549,17 @@ body .default-folders-tabs.sidebar-expanded {
   margin-bottom: 0;
 }
 
-/* 暗色模式适配 */
-[data-theme="dark"] .search-suggestions-settings {
-  background: #2d2d2d;
+[data-theme="dark"] .search-suggestions-settings,
+[data-theme="dark"] .search-opening-settings,
+[data-theme="dark"] .interface-elements-settings,
+[data-theme="dark"] .link-opening-settings,
+[data-theme="dark"] .wheel-switching-settings {
+  background: transparent;
 }
 
 
 
-[data-theme="dark"] .search-suggestions-settings .setting-option:hover {
-  background-color: #404040;
-}
-
-/* 修改设置侧边栏样式，使其不使用遮罩 */
+/* 修改设置侧边栏样式 */
 .settings-sidebar {
   position: fixed;
   top: 0;
@@ -1706,30 +1687,8 @@ body .default-folders-tabs.sidebar-expanded {
 }
 
 /* 暗色模式适配 */
-[data-theme="dark"] .settings-sidebar-nav {
-  border-right-color: #333333;
-}
-
-[data-theme="dark"] .settings-tab-button {
-  color: #ffffff;
-}
-
-[data-theme="dark"] .settings-tab-button:hover {
-  background-color: #374151;
-  color: #10b981;
-}
-
-[data-theme="dark"] .settings-tab-button.active {
-  background-color: #10b981;
-  color: #ffffff;
-}
-[data-theme="dark"] .settings-sidebar-header {
-  border-bottom: 1px solid #404040;
-}
-[data-theme="dark"] .settings-sidebar-close:hover {
-  color: #ffffff;
-}
-/* 响应式设计 - 在小屏幕上切换回上下结构 */
+/* 设置面板标签按钮 */
+/* 响应式设计 */
 @media (max-width: 768px) {
   .settings-sidebar .settings-layout {
     flex-direction: column;
@@ -1779,18 +1738,7 @@ body .default-folders-tabs.sidebar-expanded {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="dark"] #card-height-settings {
-  background-color: #2d2d2d;
-  color: #e5e7eb;
-}
-
-/* 暗色模式适配 */
-[data-theme="dark"] #container-width-settings {
-  background: #2d2d2d;
-}
-[data-theme="dark"] #floating-width-settings {
-  background: #2d2d2d;
-}
+/* 设置面板样式统一处理 */
 .settings-tab-content p {
   font-size: 14px;
   margin-bottom: 1rem;
@@ -2107,7 +2055,40 @@ body .default-folders-tabs.sidebar-expanded {
   color: #10b981;
 }
 
-/* 必应壁纸样式 */
+/* 设置面板暗色模式统一适配 - 放在文件末尾以确保最高优先级 */
+[data-theme="dark"] .setting-option,
+[data-theme="dark"] .interface-elements-settings .setting-option,
+[data-theme="dark"] .search-suggestions-settings .setting-option {
+  background-color: #2d2d2d !important;
+  color: #e5e7eb !important;
+  border: 1px solid #333 !important;
+}
+
+[data-theme="dark"] .setting-option:hover,
+[data-theme="dark"] .interface-elements-settings .setting-option:hover,
+[data-theme="dark"] .search-suggestions-settings .setting-option:hover {
+  background-color: #363636 !important;
+  border-color: #444 !important;
+}
+
+[data-theme="dark"] #container-width-settings,
+[data-theme="dark"] #floating-width-settings,
+[data-theme="dark"] #card-height-settings {
+  background-color: #2d2d2d !important;
+  color: #e5e7eb !important;
+  border: 1px solid #333 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] input[type="range"] {
+  background-color: #4b5563 !important;
+}
+
+[data-theme="dark"] .value-display,
+[data-theme="dark"] .width-value-display {
+  background-color: #374151 !important;
+  color: #f3f4f6 !important;
+}
 .bing-wallpapers-section {
     margin-bottom: 16px;
     max-width: 800px;
