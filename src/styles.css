@@ -1317,6 +1317,75 @@ input[type="range"]::-webkit-slider-thumb:hover {
     border-color: #10b981;
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
+
+/* 设置面板暗色模式适配 */
+[data-theme="dark"] .settings-description {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .switch-label {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .slider {
+  background-color: #6b7280 !important;
+}
+
+[data-theme="dark"] .setting-option {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .settings-tab-content p {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .settings-layout select,
+[data-theme="dark"] .settings-layout input[type="text"],
+[data-theme="dark"] .settings-layout input[type="url"] {
+  background-color: #404040;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+[data-theme="dark"] .settings-layout input[type="text"]:focus,
+[data-theme="dark"] .settings-layout input[type="url"]:focus {
+  border-color: #10b981;
+  outline: none;
+}
+
+[data-theme="dark"] .settings-tab-button:hover {
+  background-color: #374151;
+}
+
+[data-theme="dark"] .settings-tab-button.active:hover {
+  background-color: #10b981;
+}
+
+[data-theme="dark"] .bing-wallpaper-item {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+[data-theme="dark"] .bing-wallpaper-item:hover {
+  border-color: #10b981;
+}
+
+[data-theme="dark"] .bing-wallpaper-item.active {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .bing-wallpaper-info {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .bing-wallpaper-date {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .wallpaper-section {
+  border-color: #374151;
+}
 /* 修改默认文件夹切换区域样式 */
 .default-folders-tabs {
   position: fixed;

@@ -187,7 +187,7 @@
   <div id="settings-sidebar" class="settings-sidebar">
     <div class="settings-sidebar-content">
       <div class="settings-sidebar-header">
-        <h2 class="settings-modal-title" data-i18n="settingsTitle">设置</h2>
+        <h2 class="settings-modal-title" data-i18n="settingsTitle">扩展设置</h2>
         <span class="settings-sidebar-close">&times;</span>
       </div>
       <div class="settings-layout">
@@ -198,7 +198,6 @@
           <button class="settings-tab-button" data-tab="floating-ball" data-i18n="floatingBallTab">悬浮球设置</button>
           <button class="settings-tab-button" data-tab="quick-links" data-i18n="quickLinksTab">网站推荐</button>
           <button class="settings-tab-button" data-tab="link-opening" data-i18n="linkOpeningTab">链接打开方式</button>
-          <button class="settings-tab-button" data-tab="bookmark-management" data-i18n="bookmarkManagementTab">书签管理</button>
           <button class="settings-tab-button" data-tab="wheel-switching" data-i18n="wheelSwitchingTab">滚轮切换</button>
           <button class="settings-tab-button" data-tab="shortcuts" data-i18n="shortcutsTab">快捷键</button>
 
@@ -212,6 +211,7 @@
                 <option value="light" data-i18n="lightTheme">浅色</option>
                 <option value="dark" data-i18n="darkTheme">深色</option>
                 <option value="auto" data-i18n="autoTheme">跟随系统</option>
+                <option value="time" data-i18n="timeTheme">跟随时间</option>
               </select>
             </div>
             
@@ -235,7 +235,9 @@
                   <!-- 必应壁纸将通过 JS 动态加载 -->
                 </div>
               </div>
-              
+            </div>
+
+            <div class="wallpaper-section">
               <h4 class="settings-section-title" data-i18n="presetWallpaperTitle">预设壁纸</h4>
               <div class="wallpaper-options-container">
                 <div class="wallpaper-options">
@@ -449,18 +451,7 @@
               </label>
             </div>
           </div>
-           <div id="bookmark-management-settings" class="settings-tab-content">
-             <h3 class="settings-modal-subtitle" data-i18n="bookmarkCleanupSettingsTitle">书签清理与统计</h3>
-             <p data-i18n="bookmarkCleanupSettingsDescription">清理重复和失效的书签，查看书签使用统计数据，帮助您更好地管理书签。</p>
-             
-             <div class="bookmark-cleanup-actions">
-               <button id="open-bookmark-cleanup" class="primary-button">
-                 <span class="material-icons">cleaning_services</span>
-                 <span data-i18n="openBookmarkCleanup">打开书签清理工具</span>
-               </button>
-             </div>
-           </div>
-           <div id="wheel-switching-settings" class="settings-tab-content">
+          <div id="wheel-switching-settings" class="settings-tab-content">
              <h3 class="settings-modal-subtitle" data-i18n="wheelSwitchingSettingsTitle">滚轮切换</h3>
              <p data-i18n="wheelSwitchingDescription">设置滚轮切换功能</p>
              <div class="setting-option">

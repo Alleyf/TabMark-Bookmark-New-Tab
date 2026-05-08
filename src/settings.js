@@ -293,9 +293,11 @@ class SettingsManager {
     // 设置下拉菜单的初始值
     themeSelect.value = savedTheme;
     
-    // 如果是自动模式，根据系统主题设置初始主题
+    // 根据保存的主题设置应用初始主题
     if (savedTheme === 'auto') {
       this.setThemeBasedOnSystem();
+    } else if (savedTheme === 'time') {
+      this.setThemeBasedOnTime();
     } else {
       document.documentElement.setAttribute('data-theme', savedTheme);
       this.updateThemeIcon(savedTheme === 'dark');
@@ -317,6 +319,8 @@ class SettingsManager {
       
       if (selectedTheme === 'auto') {
         this.setThemeBasedOnSystem();
+      } else if (selectedTheme === 'time') {
+        this.setThemeBasedOnTime();
       } else {
         document.documentElement.setAttribute('data-theme', selectedTheme);
         this.updateThemeIcon(selectedTheme === 'dark');
@@ -337,6 +341,20 @@ class SettingsManager {
         this.updateThemeIcon(newTheme === 'dark');
       });
     }
+
+    // 每分钟检查一次时间主题切换
+    this._timeThemeInterval = setInterval(() => {
+      if (localStorage.getItem('theme') === 'time') {
+        this.setThemeBasedOnTime();
+      }
+    }, 60000);
+  }
+
+  setThemeBasedOnTime() {
+    const hour = new Date().getHours();
+    const isDark = hour < 6 || hour >= 18; // 18:00-05:59 深色, 06:00-17:59 浅色
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    this.updateThemeIcon(isDark);
   }
 
   setThemeBasedOnSystem() {

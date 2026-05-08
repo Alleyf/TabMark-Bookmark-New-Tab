@@ -7,5 +7,8 @@
   },
   "enableQuickLinks": {
     "message": "启用快捷链接"
+  },
+  "timeTheme": {
+    "message": "跟随时间"
   }
 }
