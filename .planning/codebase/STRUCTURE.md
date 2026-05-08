@@ -89,5 +89,5 @@ sidepanel-navigation.js  (web pages via postMessage)
 ```
 
 ## Version
-- Extension version: `1.246` (from manifest.json)
+- Extension version: `1.250` (from manifest.json)
 - Single version number, no semver convention detected
