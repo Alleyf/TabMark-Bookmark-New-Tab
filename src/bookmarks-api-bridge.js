@@ -28,49 +28,50 @@
     move: api.bookmarks.move
   };
 
+  // Chrome 根目录ID → Firefox 根目录ID 映射
+  const CHROME_TO_FIREFOX_ID = {
+    '0': 'root________',
+    '1': 'toolbar_____',
+    '2': 'unfiled_____',
+    '3': 'menu________'
+  };
+
   // 包装每个方法以支持回调
   api.bookmarks.getChildren = function(id, callback) {
-    // 验证参数
     if (!id) {
-      console.warn('bookmarks.getChildren: invalid id parameter:', id);
       if (callback) callback([]);
       return Promise.resolve([]);
     }
 
-    return originalMethods.getChildren(id).then(result => {
-      // 确保 result 是有效的数组
+    // 映射 Chrome 根目录ID 到 Firefox 等效ID
+    const firefoxId = CHROME_TO_FIREFOX_ID[id] || id;
+
+    return originalMethods.getChildren(firefoxId).then(result => {
       const validResult = Array.isArray(result) ? result : [];
       if (callback) callback(validResult);
       return validResult;
-    }).catch(error => {
-      console.error('bookmarks.getChildren error for id:', id, error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
 
   api.bookmarks.getTree = function(callback) {
     return originalMethods.getTree().then(result => {
-      // Firefox 可能返回 null 或 undefined，需要处理
       if (!result || !Array.isArray(result) || result.length === 0) {
-        console.warn('bookmarks.getTree returned empty or invalid result, returning empty array');
         const emptyResult = [];
         if (callback) callback(emptyResult);
         return emptyResult;
       }
 
-      // 确保第一个节点有 children 属性
       if (!result[0].children) {
         result[0].children = [];
       }
 
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.getTree error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -79,10 +80,8 @@
     return originalMethods.search(query).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.search error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -91,10 +90,8 @@
     return originalMethods.get(idOrIds).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.get error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -103,10 +100,8 @@
     return originalMethods.create(bookmark).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.create error:', error);
+    }).catch(() => {
       if (callback) callback(null);
-      // 不再抛出错误，以避免错误传播到调用栈
       return null;
     });
   };
@@ -115,10 +110,8 @@
     return originalMethods.update(id, changes).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.update error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -126,10 +119,8 @@
   api.bookmarks.remove = function(id, callback) {
     return originalMethods.remove(id).then(() => {
       if (callback) callback();
-    }).catch(error => {
-      console.error('bookmarks.remove error:', error);
+    }).catch(() => {
       if (callback) callback();
-      // 不再抛出错误，以避免错误传播到调用栈
       return;
     });
   };
@@ -138,15 +129,13 @@
     return originalMethods.move(id, destination).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('bookmarks.move error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
 
-  // 同样包装storage API
+  // 同样的静默包装应用于 storage API
   const originalStorage = {
     local: {
       get: api.storage.local.get,
@@ -162,15 +151,12 @@
     }
   };
 
-  // Storage包装
   api.storage.local.get = function(keys, callback) {
     return originalStorage.local.get(keys).then(result => {
       if (callback) callback(result);
       return result;
-    }).catch(error => {
-      console.error('storage.local.get error:', error);
+    }).catch(() => {
       if (callback) callback({});
-      // 不再抛出错误，以避免错误传播到调用栈
       return {};
     });
   };
@@ -178,10 +164,8 @@
   api.storage.local.set = function(items, callback) {
     return originalStorage.local.set(items).then(() => {
       if (callback) callback();
-    }).catch(error => {
-      console.error('storage.local.set error:', error);
+    }).catch(() => {
       if (callback) callback();
-      // 不再抛出错误，以避免错误传播到调用栈
       return;
     });
   };
@@ -189,10 +173,8 @@
   api.storage.local.remove = function(keys, callback) {
     return originalStorage.local.remove(keys).then(() => {
       if (callback) callback();
-    }).catch(error => {
-      console.error('storage.local.remove error:', error);
+    }).catch(() => {
       if (callback) callback();
-      // 不再抛出错误，以避免错误传播到调用栈
       return;
     });
   };
@@ -200,10 +182,46 @@
   api.storage.local.clear = function(callback) {
     return originalStorage.local.clear().then(() => {
       if (callback) callback();
-    }).catch(error => {
-      console.error('storage.local.clear error:', error);
+    }).catch(() => {
       if (callback) callback();
-      // 不再抛出错误，以避免错误传播到调用栈
+      return;
+    });
+  };
+
+  // 同样的静默包装应用于 sync storage API
+  api.storage.sync.get = function(keys, callback) {
+    return originalStorage.sync.get(keys).then(result => {
+      if (callback) callback(result);
+      return result;
+    }).catch(() => {
+      if (callback) callback({});
+      return {};
+    });
+  };
+
+  api.storage.sync.set = function(items, callback) {
+    return originalStorage.sync.set(items).then(() => {
+      if (callback) callback();
+    }).catch(() => {
+      if (callback) callback();
+      return;
+    });
+  };
+
+  api.storage.sync.remove = function(keys, callback) {
+    return originalStorage.sync.remove(keys).then(() => {
+      if (callback) callback();
+    }).catch(() => {
+      if (callback) callback();
+      return;
+    });
+  };
+
+  api.storage.sync.clear = function(callback) {
+    return originalStorage.sync.clear().then(() => {
+      if (callback) callback();
+    }).catch(() => {
+      if (callback) callback();
       return;
     });
   };
@@ -221,10 +239,8 @@
     return originalTabs.create(createProperties).then(tab => {
       if (callback) callback(tab);
       return tab;
-    }).catch(error => {
-      console.error('tabs.create error:', error);
+    }).catch(() => {
       if (callback) callback(null);
-      // 不再抛出错误，以避免错误传播到调用栈
       return null;
     });
   };
@@ -233,10 +249,8 @@
     return originalTabs.query(queryInfo).then(tabs => {
       if (callback) callback(tabs);
       return tabs;
-    }).catch(error => {
-      console.error('tabs.query error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -245,10 +259,8 @@
     return originalTabs.update(tabId, updateProperties).then(tab => {
       if (callback) callback(tab);
       return tab;
-    }).catch(error => {
-      console.error('tabs.update error:', error);
+    }).catch(() => {
       if (callback) callback([]);
-      // 不再抛出错误，以避免错误传播到调用栈
       return [];
     });
   };
@@ -256,10 +268,8 @@
   api.tabs.remove = function(tabIds, callback) {
     return originalTabs.remove(tabIds).then(() => {
       if (callback) callback();
-    }).catch(error => {
-      console.error('tabs.remove error:', error);
+    }).catch(() => {
       if (callback) callback();
-      // 不再抛出错误，以避免错误传播到调用栈
       return;
     });
   };
@@ -268,13 +278,9 @@
     return originalTabs.get(tabId).then(tab => {
       if (callback) callback(tab);
       return tab;
-    }).catch(error => {
-      console.error('tabs.get error:', error);
+    }).catch(() => {
       if (callback) callback(null);
-      // 不再抛出错误，以避免错误传播到调用栈
       return null;
     });
   };
-
-  console.log('Firefox API桥接器已加载');
 })();

@@ -349,7 +349,7 @@ function getLocalizedMessage(messageName) {
 
 // Define the context menu creation function
 function createContextMenu() {
-  console.log('Creating context menu');
+
   
   // 移除任何已存在的上下文菜单
   const existingMenu = document.querySelector('.custom-context-menu');
@@ -685,7 +685,6 @@ function initVirtualScroll() {
 
 // 3. 合并 DOMContentLoaded 事件监听器
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('[Init] Starting initialization...');
 
   try {
     // 初始化虚拟滚动
@@ -710,7 +709,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   try {
     setupSpecialLinks();
-    console.log('[Init] Special links setup complete');
   } catch (e) {
     console.error('Error setting up special links:', e);
   }
@@ -730,12 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const useDefaultBackground = localStorage.getItem('useDefaultBackground');
   const hasWallpaper = localStorage.getItem('originalWallpaper');
 
-  console.log('[Background] Initial load state:', {
-    savedBg,
-    useDefaultBackground,
-    hasWallpaper
-  });
-
   // 清除所有选项的 active 状态
   document.querySelectorAll('.settings-bg-option').forEach(opt => {
     opt.classList.remove('active');
@@ -743,26 +735,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (savedBg) {
     if (useDefaultBackground === 'true') {
-      console.log('[Background] Activating saved background color:', savedBg);
       document.documentElement.className = savedBg;
       const activeOption = document.querySelector(`[data-bg="${savedBg}"]`);
       if (activeOption) {
         activeOption.classList.add('active');
       }
     } else if (hasWallpaper) {
-      console.log('[Background] Wallpaper is active, keeping background options unselected');
     }
   } else {
-    console.log('[Background] No saved background, checking wallpaper state');
     if (!hasWallpaper && useDefaultBackground !== 'false') {
-      console.log('[Background] No wallpaper, using default background');
       document.documentElement.className = 'gradient-background-7';
       const defaultOption = document.querySelector('[data-bg="gradient-background-7"]');
       if (defaultOption) {
         defaultOption.classList.add('active');
       }
     } else {
-      console.log('[Background] Wallpaper exists, skipping default background');
       document.documentElement.className = '';
     }
   }
@@ -771,7 +758,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (hasWallpaper) {
     const wallpaperOption = document.querySelector(`.wallpaper-option[data-wallpaper-url="${hasWallpaper}"]`);
     if (wallpaperOption) {
-      console.log('[Background] Activating wallpaper option');
       wallpaperOption.classList.add('active');
     }
   }
@@ -781,22 +767,15 @@ document.addEventListener('DOMContentLoaded', function() {
   bgOptions.forEach(option => {
     option.addEventListener('click', function() {
       const bgClass = this.getAttribute('data-bg');
-      console.log('[Background] Color option clicked:', {
-        bgClass,
-        previousBackground: document.documentElement.className,
-        previousWallpaper: localStorage.getItem('originalWallpaper')
-      });
 
       // 移除所有背景选项的 active 状态
       bgOptions.forEach(opt => {
         opt.classList.remove('active');
-        console.log('[Background] Removing active state from:', opt.getAttribute('data-bg'));
       });
-      
+
       // 添加当前选项的 active 状态
       this.classList.add('active');
-      console.log('[Background] Setting active state for:', bgClass);
-      
+
       document.documentElement.className = bgClass;
       localStorage.setItem('selectedBackground', bgClass);
       localStorage.setItem('useDefaultBackground', 'true');
@@ -1488,8 +1467,6 @@ async function initDefaultFoldersTabs() {
   
   // 确保文件夹按 order 排序
   defaultFolders = defaultFolders.sort((a, b) => a.order - b.order);
-  
-  console.log('Initializing default folders tabs:', defaultFolders);
 
   // 清空现有标签
   tabsContainer.innerHTML = '';
@@ -1636,7 +1613,6 @@ function initWheelSwitching() {
         // 找到对应顺序的文件夹并切换
         const nextFolder = defaultFolders.find(f => f.order === nextOrder);
         if (nextFolder) {
-          console.log('Wheel switching to folder:', nextFolder.title);
           await switchToFolder(nextFolder.id);
           
           // 添加切换动画效果
@@ -1670,33 +1646,28 @@ function initWheelSwitching() {
   
 // 添加或移除事件监听器的函数
   const updateWheelListener = (enabled) => {
-    console.log('Updating wheel listener, enabled:', enabled);
     if (enabled) {
       if (!wheelEventListener) {
         main.addEventListener('wheel', wheelHandler, { passive: true });
         wheelEventListener = wheelHandler;
-        console.log('Wheel listener added');
       }
     } else {
       if (wheelEventListener) {
         main.removeEventListener('wheel', wheelEventListener);
         wheelEventListener = null;
-        console.log('Wheel listener removed');
       }
     }
   };
-  
+
 // 检查设置并初始化
   api.storage.sync.get({ enableWheelSwitching: false }, (result) => {
     isEnabled = result.enableWheelSwitching;
-    console.log('Wheel switching enabled:', isEnabled);
     updateWheelListener(isEnabled);
   });
-  
+
 // 监听设置变化
   document.addEventListener('wheelSwitchingChanged', (event) => {
     isEnabled = event.detail?.enabled || false;  // 安全访问detail属性
-    console.log('Wheel switching setting changed:', isEnabled);
     updateWheelListener(isEnabled);
     
     // 可选：添加视觉反馈
@@ -1711,8 +1682,7 @@ function initWheelSwitching() {
 // 修改文件夹切换函数，确保同步更新所有状态
 async function switchToFolder(folderId) {
   try {
-    console.log('Switching to folder:', folderId);
-    
+
     // 验证文件夹是否存在
     const results = await api.bookmarks.get(folderId);
     if (!results || results.length === 0) {
@@ -6636,8 +6606,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 启动兜底：若尚未设置当前目录，默认切到根目录，确保有内容
   const list = document.getElementById('bookmarks-list');
+  const defaultInitialId = isFirefox ? 'toolbar_____' : '1';
   if (list && !list.dataset.parentId && typeof window.updateBookmarksDisplay === 'function') {
-    window.updateBookmarksDisplay('1');
+    window.updateBookmarksDisplay(defaultInitialId);
   }
 
   // 暴露稳定的更新入口，供侧键导航与其他模块调用
