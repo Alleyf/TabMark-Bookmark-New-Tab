@@ -14,12 +14,10 @@ function getFaviconUrl(url, size = 32) {
     const faviconServices = [
       // 方案1: Yandex Favicon（俄罗斯服务，国内可用，速度快）
       `https://favicon.yandex.net/favicon/${domain}`,
-      // 方案2: Google Favicon（可能需要代理，但覆盖最广）
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`,
-      // 方案3: DuckDuckGo Favicon（国外服务，但相对稳定）
+      // 方案2: DuckDuckGo Favicon（国外服务，但相对稳定）
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-      // 方案4: 直接获取（最后备选）
-      `https://${domain}/favicon.ico`
+      // 方案3: Google Favicon（可能需要代理，但覆盖最广）
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
     ];
 
     // 默认使用第一个服务（Yandex）
@@ -42,8 +40,7 @@ function getFaviconCandidates(url, size = 32) {
     return [
       `https://favicon.yandex.net/favicon/${domain}`,
       `https://icons.duckduckgo.com/ip3/${domain}.ico`,
-      `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`,
-      `https://${domain}/favicon.ico`
+      `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`
     ];
   } catch (e) {
     console.error('Error parsing URL for favicon candidates:', e);

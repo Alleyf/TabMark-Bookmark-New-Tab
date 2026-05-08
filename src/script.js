@@ -2046,54 +2046,19 @@ function createBookmarkCard(bookmark, index) {
 
   const img = document.createElement('img');
   img.className = 'w-6 h-6 mr-2';
-  // 统一favicon加载：尝试内置方案 → 外部候选源自动回退
-  // 所有浏览器共享同一套回退链，提高可靠性
-  if (typeof window.setFaviconWithFallback === 'function') {
-    // 有完整回退链（favicon-helper.js 提供）
-    window.setFaviconWithFallback(img, bookmark.url, 32);
-  } else if (!isFirefox) {
-    // Chrome/Chromium: 先试内置 _favicon API，失败后回退到外部候选源
+  // 统一favicon加载策略
+  if (!isFirefox) {
+    // Chrome: 优先使用内置 _favicon API（浏览器缓存，最快最可靠）
     img.src = `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
-    let chromeFallbackTried = false;
     img.onerror = function () {
-      if (!chromeFallbackTried && typeof window.getFaviconCandidates === 'function') {
-        chromeFallbackTried = true;
-        const candidates = window.getFaviconCandidates(bookmark.url, 32);
-        let ci = 0;
-        img.onerror = function () {
-          ci++;
-          if (ci < candidates.length) {
-            img.src = candidates[ci];
-          } else {
-            const dc = { primary: [200, 200, 200], secondary: [220, 220, 220] };
-            applyColors(card, dc);
-            localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(dc));
-          }
-        };
-        img.src = candidates[0];
-        return;
+      // _favicon API 失败，回退到外部服务（不再直接访问目标域名的 favicon.ico）
+      if (typeof window.setFaviconWithFallback === 'function') {
+        window.setFaviconWithFallback(img, bookmark.url, 32);
       }
-      const dc = { primary: [200, 200, 200], secondary: [220, 220, 220] };
-      applyColors(card, dc);
-      localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(dc));
     };
-  } else {
-    // Firefox 降级：手动候选回退
-    const candidates = window.getFaviconCandidates ? window.getFaviconCandidates(bookmark.url, 32) : [];
-    if (candidates.length > 0) {
-      let ci = 0;
-      img.src = candidates[0];
-      img.onerror = function () {
-        ci++;
-        if (ci < candidates.length) {
-          img.src = candidates[ci];
-        } else {
-          const dc = { primary: [200, 200, 200], secondary: [220, 220, 220] };
-          applyColors(card, dc);
-          localStorage.setItem(`bookmark-colors-${bookmark.id}`, JSON.stringify(dc));
-        }
-      };
-    }
+  } else if (typeof window.setFaviconWithFallback === 'function') {
+    // Firefox: 直接使用外部服务候选回退（Firefox 无内置 _favicon API）
+    window.setFaviconWithFallback(img, bookmark.url, 32);
   }
 
   // 尝试从缓存获取颜色
