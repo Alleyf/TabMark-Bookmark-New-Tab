@@ -1520,7 +1520,8 @@ async function initDefaultFoldersTabs() {
     await switchToFolder(folderToActivate);
   } else {
     // 当没有默认文件夹时，切换到根文件夹或其他指定文件夹
-    await switchToFolder('1'); // '1' 是根文件夹的 ID
+    const rootId = isFirefox ? 'toolbar_____' : '1';
+    await switchToFolder(rootId);
   }
 
   // 更新显示状态
@@ -1531,48 +1532,63 @@ async function initDefaultFoldersTabs() {
 
 // 修改滚轮切换功能的实现
 function initWheelSwitching() {
-  // 防止重复初始化：避免每次 initDefaultFoldersTabs 都添加新监听器
+  // 防止重复初始化
   if (wheelSwitchingInitialized) return;
   wheelSwitchingInitialized = true;
-
-  const main = document.querySelector('main');
-  if (!main) return;
 
   let wheelTimeout;
   let isProcessing = false;
   let wheelEventListener = null;
-  let isEnabled = false; // 默认禁用
-  
-// 创建滚轮事件处理函数
+  let isEnabled = false;
+
+  // 检查 bookmarks-list 是否可滚动
+  function isListScrollable() {
+    const list = document.getElementById('bookmarks-list');
+    if (!list) return false;
+    return list.scrollHeight > list.clientHeight + 5; // 增加容错值
+  }
+
+  // 创建滚轮事件处理函数
   const wheelHandler = async (event) => {
-    // 如果功能被禁用，直接返回
-    if (!isEnabled) return;
-    
+    // 实时检查设置，确保生效
+    if (!isEnabled) {
+      try {
+        const result = await api.storage.sync.get({ enableWheelSwitching: false });
+        if (!result.enableWheelSwitching) return;
+      } catch {
+        return;
+      }
+    }
+
     // 检查是否在应该阻止滚轮切换的区域内滚动
     const blockedElements = [
-      '#bookmarks-list',        // 书签列表区域
-      '.search-form',           // 搜索表单
-      '.search-suggestions',    // 搜索建议
-      '.search-suggestions-wrapper', // 搜索建议包装器
-      '.quick-links-container', // 快速链接容器
-      '.settings-modal',        // 设置模态框
-      '.modal-overlay',        // 模态框遮罩
-      '.context-menu',         // 右键菜单
-      '.dropdown-menu'         // 下拉菜单
+      '.search-form',
+      '.search-suggestions',
+      '.search-suggestions-wrapper',
+      '.quick-links-container',
+      '.settings-modal',
+      '.modal-overlay',
+      '.context-menu',
+      '.dropdown-menu',
+      '#sidebar-container', // 侧边栏内部
+      '.wallpaper-section', // 壁纸预览区域
+      '.settings-content'   // 设置内容区
     ];
-    
-    // 如果滚动目标在任何被阻止的元素内，则不触发滚轮切换
+
     if (blockedElements.some(selector => event.target.closest(selector))) {
       return;
     }
-    
-    // 额外检查：确保在 main 元素内（只在主内容区域生效）
-    if (!event.target.closest('main')) {
+
+    // bookmarks-list 仅在不可滚动时才允许切换
+    if (event.target.closest('#bookmarks-list') && isListScrollable()) {
       return;
     }
 
     // 防止重复触发
     if (isProcessing) return;
+
+    const deltaY = event.deltaY;
+    if (Math.abs(deltaY) < 30) return; // 忽略微小滚动
 
     // 防抖处理
     clearTimeout(wheelTimeout);
@@ -1587,91 +1603,66 @@ function initWheelSwitching() {
           return;
         }
 
-        // 获取当前激活的标签
         const activeTab = document.querySelector('.folder-tab.active');
         if (!activeTab) {
           isProcessing = false;
           return;
         }
 
-        const currentOrder = parseInt(activeTab.dataset.order);
-        let nextOrder;
-
-        // 根据滚动方向决定下一个标签
-        if (event.deltaY > 0) { // 向下滚动
-          nextOrder = currentOrder + 1;
-          if (nextOrder >= defaultFolders.length) {
-            nextOrder = 0;
-          }
-        } else { // 向上滚动
-          nextOrder = currentOrder - 1;
-          if (nextOrder < 0) {
-            nextOrder = defaultFolders.length - 1;
-          }
+        const currentId = activeTab.dataset.folderId;
+        const currentIndex = defaultFolders.findIndex(f => f.id === currentId);
+        if (currentIndex === -1) {
+          isProcessing = false;
+          return;
         }
 
-        // 找到对应顺序的文件夹并切换
-        const nextFolder = defaultFolders.find(f => f.order === nextOrder);
-        if (nextFolder) {
+        let nextIndex;
+        if (deltaY > 0) { // 向下滚动 -> 下一个文件夹
+          nextIndex = (currentIndex + 1) % defaultFolders.length;
+        } else { // 向上滚动 -> 上一个文件夹
+          nextIndex = (currentIndex - 1 + defaultFolders.length) % defaultFolders.length;
+        }
+
+        const nextFolder = defaultFolders[nextIndex];
+        if (nextFolder && nextFolder.id !== currentId) {
           await switchToFolder(nextFolder.id);
-          
-          // 添加切换动画效果
-          const tabs = document.querySelectorAll('.folder-tab');
-          tabs.forEach(tab => {
-            // 重置所有标签的样式
-            tab.style.transition = 'transform 0.3s ease';
-            
-            if (tab.dataset.folderId === nextFolder.id) {
-              tab.classList.add('switching');
-              tab.style.transform = 'scale(1.2)';
-              setTimeout(() => {
-                tab.classList.remove('switching');
-                tab.style.transform = 'scale(1)';
-              }, 1500);
-            } else {
-              tab.style.transform = 'scale(1)';
-            }
-          });
         }
       } catch (error) {
         console.error('Error in wheel switching:', error);
       } finally {
-        // 设置一个短暂的冷却时间
         setTimeout(() => {
           isProcessing = false;
-        }, 150);
+        }, 300); // 冷却时间增加到 300ms
       }
-    }, 50); // 50ms 的防抖延迟
+    }, 50);
   };
-  
-// 添加或移除事件监听器的函数
+
   const updateWheelListener = (enabled) => {
+    isEnabled = enabled;
     if (enabled) {
       if (!wheelEventListener) {
-        main.addEventListener('wheel', wheelHandler, { passive: true });
+        document.addEventListener('wheel', wheelHandler, { passive: false }); // 改为 passive: false 以便必要时 preventDefault
         wheelEventListener = wheelHandler;
       }
     } else {
       if (wheelEventListener) {
-        main.removeEventListener('wheel', wheelEventListener);
+        document.removeEventListener('wheel', wheelEventListener);
         wheelEventListener = null;
       }
     }
   };
 
-// 检查设置并初始化
+  // 初始加载设置
   api.storage.sync.get({ enableWheelSwitching: false }, (result) => {
-    isEnabled = result.enableWheelSwitching;
-    updateWheelListener(isEnabled);
+    updateWheelListener(result.enableWheelSwitching);
   });
 
-// 监听设置变化
+  // 监听设置变化事件
   document.addEventListener('wheelSwitchingChanged', (event) => {
-    isEnabled = event.detail?.enabled || false;  // 安全访问detail属性
-    updateWheelListener(isEnabled);
+    const enabled = event.detail?.enabled || false;
+    updateWheelListener(enabled);
     
-    // 可选：添加视觉反馈
-    if (isEnabled) {
+    if (enabled) {
       document.body.classList.add('wheel-switching-enabled');
     } else {
       document.body.classList.remove('wheel-switching-enabled');
@@ -1682,10 +1673,12 @@ function initWheelSwitching() {
 // 修改文件夹切换函数，确保同步更新所有状态
 async function switchToFolder(folderId) {
   try {
-
     // 验证文件夹是否存在
     const results = await api.bookmarks.get(folderId);
     if (!results || results.length === 0) {
+      // 文件夹不存在，尝试从默认列表中移除并回退
+      console.warn(`Folder ${folderId} not found, cleaning up...`);
+      await cleanupInvalidFolder(folderId);
       throw new Error('Folder not found');
     }
 
@@ -1712,10 +1705,36 @@ async function switchToFolder(folderId) {
     
   } catch (error) {
     console.error('Error switching folder:', error);
-    // 错误时回退到根目录
-    await updateBookmarksDisplay('1');
-    updateFolderName('1');
-    selectSidebarFolder('1');
+    // 错误时回退到书签栏
+    const rootId = isFirefox ? 'toolbar_____' : '1';
+    await updateBookmarksDisplay(rootId);
+    updateFolderName(rootId);
+    selectSidebarFolder(rootId);
+  }
+}
+
+// 清理无效文件夹 ID
+async function cleanupInvalidFolder(folderId) {
+  try {
+    const data = await api.storage.sync.get('defaultFolders');
+    if (data.defaultFolders?.items) {
+      const updatedItems = data.defaultFolders.items.filter(f => f.id !== folderId);
+      if (updatedItems.length !== data.defaultFolders.items.length) {
+        await api.storage.sync.set({
+          defaultFolders: { ...data.defaultFolders, items: updatedItems }
+        });
+        // 重新初始化标签页以反映更改
+        initDefaultFoldersTabs();
+      }
+    }
+    
+    // 清理最后访问记录
+    const localData = await api.storage.local.get('lastViewedFolder');
+    if (localData.lastViewedFolder === folderId) {
+      await api.storage.local.remove('lastViewedFolder');
+    }
+  } catch (err) {
+    console.error('Error cleaning up invalid folder:', err);
   }
 }
 
@@ -1778,27 +1797,35 @@ function getBookmarksBarName() {
 }
 
 function getBookmarkPath(bookmarkId) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     getBookmarksBarName().then(bookmarksBarName => {
       function getParentRecursive(id, path = []) {
         api.bookmarks.get(id, function(results) {
-          if (api.runtime.lastError) {
-            reject(api.runtime.lastError);
-            return;
-          }
-          if (results && results[0]) {
-            path.unshift(results[0].title);
-            if (results[0].parentId && results[0].parentId !== '0') {
-              getParentRecursive(results[0].parentId, path);
-            } else {
-              // 确保书签栏名称总是作为第一个元素
+          if (api.runtime.lastError || !results || results.length === 0) {
+            // 如果找不到当前节点，返回已有的路径
+            if (path.length > 0) {
+              // 确保路径中有根目录
               if (path[0] !== bookmarksBarName) {
                 path.unshift(bookmarksBarName);
               }
               resolve(path);
+            } else {
+              resolve([bookmarksBarName]);
             }
+            return;
+          }
+
+          const node = results[0];
+          path.unshift(node.title);
+
+          if (node.parentId && node.parentId !== '0') {
+            getParentRecursive(node.parentId, path);
           } else {
-            reject(new Error('Bookmark not found'));
+            // 确保书签栏名称总是作为第一个元素
+            if (path[0] !== bookmarksBarName) {
+              path.unshift(bookmarksBarName);
+            }
+            resolve(path);
           }
         });
       }
@@ -3760,50 +3787,29 @@ function setupSpecialLinks() {
           return;
       }
 
-try {
-        // 检查URL是否合法，避免 about: 页面等受限制的URL
-        if (chromeUrl.startsWith('about:') && !['about:blank', 'about:newtab'].includes(chromeUrl)) {
-          console.warn('Cannot open restricted about: URL:', chromeUrl);
-          // 对于受限制的URL，提供替代方案
-          if (isFirefox) {
-            let manualInstruction = '';
-            switch (chromeUrl) {
-              case 'about:addons':
-                manualInstruction = 'Please open Firefox Add-ons page manually by typing about:addons in the address bar';
-                break;
-              case 'about:logins':
-                manualInstruction = 'Please open Firefox Password Manager manually by typing about:logins in the address bar';
-                break;
-              case 'about:downloads':
-                manualInstruction = 'Please open Firefox Downloads manually by typing about:downloads in the address bar';
-                break;
-              case 'about:history':
-                manualInstruction = 'Please open Firefox History manually by typing about:history in the address bar (or press Ctrl+H)';
-                break;
-              default:
-                manualInstruction = `Please open this Firefox page manually by typing ${chromeUrl} in the address bar`;
-            }
-            console.info(manualInstruction);
-            // 显示提示给用户
-            alert(manualInstruction);
-          }
-          isProcessingClick = false;
-          return;
-        }
-        
-        // 直接使用 api.tabs.create 打开新标签页
-        api.tabs.create({ url: chromeUrl }, (tab) => {
-          if (api.runtime.lastError) {
-            console.error('Failed to open tab:', api.runtime.lastError);
-          }
+      // 尝试打开内部页面（支持多种方法降级）
+      function tryOpenUrl(url, done) {
+        api.tabs.create({ url }, (tab) => {
+          if (!api.runtime.lastError) { done(true); return; }
+          try {
+            const win = window.open(url, '_blank');
+            if (win && !win.closed) { done(true); return; }
+          } catch (_) {}
+          done(false);
         });
-      } catch (error) {
-        console.error('Error opening internal page:', error);
-      } finally {
-        setTimeout(() => {
-          isProcessingClick = false;
-        }, 1000);
       }
+      tryOpenUrl(chromeUrl, (ok) => {
+        if (!ok && isFirefox) {
+          const guide = ({
+            'about:addons': '请手动输入 about:addons 打开扩展管理页面',
+            'about:logins': '请手动输入 about:logins 打开密码管理页面',
+            'about:downloads': '请手动输入 about:downloads 打开下载记录页面',
+            'about:history': '请手动输入 about:history 打开历史记录页面（或按 Ctrl+H）'
+          })[chromeUrl] || '请手动输入 ' + chromeUrl + ' 打开该页面';
+          alert(guide);
+        }
+        setTimeout(() => { isProcessingClick = false; }, 1000);
+      });
     });
   });
 }
@@ -4102,7 +4108,7 @@ document.addEventListener('DOMContentLoaded', function () {
     api.bookmarks.search({ url: url }, function (results) {
       if (results && results.length > 0) {
         const faviconURL = isFirefox
-          ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+          ? `https://favicon.yandex.net/favicon/${domain}`
           : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
         const img = new Image();
         img.onload = function () {
@@ -4120,6 +4126,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function fetchFaviconOnline(domain, callback) {
     const faviconUrls = [
+      `https://favicon.yandex.net/favicon/${domain}`,
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
       `https://www.google.com/s2/favicons?domain=${domain}`,
     ];
 
@@ -5899,21 +5907,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
 
-  // Add this function to fetch favicons
+  // Add this function to fetch favicons — 直接使用 Yandex，跳过 _favicon/ API 预加载（缓解缺失 favicon 权限/URL 加载异常问题）
   function getFavicon(url, callback) {
     try {
       const domain = new URL(url).hostname;
-      const faviconURL = isFirefox
-        ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
-        : `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
-      const img = new Image();
-      img.onload = function () {
-        callback(faviconURL);
-      };
-      img.onerror = function () {
-        callback(''); // Return an empty string if favicon is not found
-      };
-      img.src = faviconURL;
+      callback(`https://favicon.yandex.net/favicon/${domain}`);
     } catch (e) {
       callback('');
     }
@@ -5922,7 +5920,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Add this function to fetch favicon online as a fallback
   function fetchFaviconOnline(url, callback) {
     const domain = new URL(url).hostname;
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    const faviconUrl = `https://favicon.yandex.net/favicon/${domain}`;
     const img = new Image();
     img.onload = function () {
       cacheFavicon(domain, faviconUrl);
@@ -6619,19 +6617,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 鼠标侧键导航功能
 function initMouseSideButtonNavigation() {
-  document.addEventListener('mousedown', async function(event) {
-    // 检查是否启用了鼠标侧键导航
+  // 监听 auxclick 事件，专门处理非左键点击（如侧键）
+  document.addEventListener('auxclick', async function(event) {
     if (!mouseNavigationEnabled) return;
 
-    // 检查是否在导航冷却时间内
-    const now = Date.now();
-    if (now - lastMouseNavigationTime < mouseNavigationCooldown) return;
-
-    // 鼠标侧键检测：标准上 button=3(后退), button=4(前进)
+    // 鼠标侧键检测：button=3(后退), button=4(前进)
     const isBackButton = event.button === 3;
     const isForwardButton = event.button === 4;
 
     if (!isBackButton && !isForwardButton) return;
+
+    // 检查是否在导航冷却时间内
+    const now = Date.now();
+    if (now - lastMouseNavigationTime < mouseNavigationCooldown) {
+      event.preventDefault();
+      return;
+    }
 
     event.preventDefault();
 
@@ -6641,6 +6642,13 @@ function initMouseSideButtonNavigation() {
     } else if (isForwardButton) {
       await navigateToChildFolder();
       lastMouseNavigationTime = now;
+    }
+  });
+
+  // 同时也监听 mousedown 以便在某些浏览器中更早地拦截默认行为
+  document.addEventListener('mousedown', function(event) {
+    if (event.button === 3 || event.button === 4) {
+      event.preventDefault();
     }
   });
 }

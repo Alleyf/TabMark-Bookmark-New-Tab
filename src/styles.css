@@ -412,26 +412,26 @@ main.flex-1 {
 }
 
 .wallpaper-options {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  max-height: 340px;
+  max-height: 400px;
   overflow-y: auto;
   padding: 10px 0;
-  /* margin-bottom: 16px; */
   scrollbar-width: thin;
-  scrollbar-gutter: stable;
 }
 
 .wallpaper-option {
+    position: relative;
     border: 2px solid #242424;
-    width: 70px;
-    height: 70px;
     background-size: cover;
+    background-position: center;
     cursor: pointer;
-    transition: border-color 0.3s;
-    flex: 0 0 auto;
+    transition: all 0.2s ease;
     border-radius: 8px;
+    aspect-ratio: 16/9;
+    width: 100%;
+    height: auto;
 }
 
 .wallpaper-option:hover {

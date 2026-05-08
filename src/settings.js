@@ -885,8 +885,38 @@ class SettingsManager {
   initShortcutsSettings() {
     const shortcutItem = document.getElementById('configure-shortcuts');
     if (shortcutItem) {
-      shortcutItem.addEventListener('click', () => {
+shortcutItem.addEventListener('click', () => {
         const url = isFirefox ? 'about:addons' : 'chrome://extensions/shortcuts';
+        
+        // 检查URL是否合法，避免 about: 页面等受限制的URL
+        if (url.startsWith('about:') && !['about:blank', 'about:newtab'].includes(url)) {
+          console.warn('Cannot open restricted about: URL:', url);
+          // 对于受限制的URL，提供替代方案
+          if (isFirefox) {
+            let manualInstruction = '';
+            switch (url) {
+              case 'about:addons':
+                manualInstruction = 'Please open Firefox Add-ons page manually by typing about:addons in the address bar';
+                break;
+              case 'about:logins':
+                manualInstruction = 'Please open Firefox Password Manager manually by typing about:logins in the address bar';
+                break;
+              case 'about:downloads':
+                manualInstruction = 'Please open Firefox Downloads manually by typing about:downloads in the address bar';
+                break;
+              case 'about:history':
+                manualInstruction = 'Please open Firefox History manually by typing about:history in the address bar (or press Ctrl+H)';
+                break;
+              default:
+                manualInstruction = `Please open this Firefox page manually by typing ${url} in the address bar`;
+            }
+            console.info(manualInstruction);
+            // 显示提示给用户
+            alert(manualInstruction);
+          }
+          return;
+        }
+        
         api.tabs.create({
           url: url
         });

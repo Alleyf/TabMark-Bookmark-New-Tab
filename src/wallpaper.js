@@ -79,11 +79,11 @@ class WallpaperManager {
         this.presetWallpapers = [
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-1.jpg'),
-                title: 'Foggy Forest'
+                title: 'Night Mountain'
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-2.jpg'),
-                title: 'Mountain Lake'
+                title: 'Forest'
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-3.jpg'),
@@ -91,7 +91,7 @@ class WallpaperManager {
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-4.jpg'),
-                title: 'City Night'
+                title: 'Starry Night'
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-5.jpg'),
@@ -103,19 +103,15 @@ class WallpaperManager {
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-7.jpg'),
-                title: 'Mountain View'
+                title: 'Mountain Lake'
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-8.jpg'),
-                title: 'Forest Lake'
+                title: 'Ocean Wave'
             },
             {
                 url: this.api.runtime.getURL('images/wallpapers/wallpaper-9.jpg'),
-                title: 'Sunset Hills'
-            },
-            {
-                url: this.api.runtime.getURL('images/wallpapers/wallpaper-10.jpg'),
-                title: 'Ocean View'
+                title: 'Winter Forest'
             }
         ];
     }
@@ -949,32 +945,33 @@ class WallpaperManager {
             const cacheBuster = Date.now();
 
             // 首先尝试使用Chrome扩展的权限来直接访问Bing API
+            // 调整顺序：优先尝试 cn.bing.com，国内用户访问更稳定
             const endpoints = [
-                `https://www.bing.com/HPImageArchive.aspx?format=js&idx=${idx}&n=${count}&mkt=en-US&_=${cacheBuster}`,
                 `https://cn.bing.com/HPImageArchive.aspx?format=js&idx=${idx}&n=${count}&mkt=zh-CN&_=${cacheBuster}`,
+                `https://www.bing.com/HPImageArchive.aspx?format=js&idx=${idx}&n=${count}&mkt=en-US&_=${cacheBuster}`,
                 `https://www.bing.com/HPImageArchive.aspx?format=js&idx=${idx}&n=${count}&mkt=en-US&uhd=1&uhdwidth=3840&uhdheight=2160&_=${cacheBuster}`
             ];
 
             let data = null;
             let response = null;
+            let successfulHost = 'https://cn.bing.com'; // 默认使用 cn.bing.com
 
             // 尝试不同的端点直到成功
             for (const endpoint of endpoints) {
                 try {
+                    const urlObj = new URL(endpoint);
                     response = await fetch(endpoint, {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                            'Referer': 'https://www.bing.com/'
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                         }
                     });
 
                     if (response.ok) {
                         data = await response.json();
+                        successfulHost = `${urlObj.protocol}//${urlObj.hostname}`;
                         break; // 成功获取数据，跳出循环
-                    } else {
-                        // 静默失败
                     }
                 } catch (e) {
                     continue; // 尝试下一个端点
@@ -982,6 +979,25 @@ class WallpaperManager {
             }
 
             if (!data?.images) {
+                // 尝试使用备用的第三方 API (如果官方全部失败)
+                try {
+                    const backupResponse = await fetch(`https://bing.biturl.top/?resolution=1920&format=json&index=${idx}&mkt=zh-CN`);
+                    if (backupResponse.ok) {
+                        const backupData = await backupResponse.json();
+                        if (backupData && backupData.url) {
+                            return [{
+                                url: backupData.url,
+                                title: backupData.copyright || 'Bing Wallpaper',
+                                copyright: backupData.copyright,
+                                date: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+                                hash: 'backup'
+                            }];
+                        }
+                    }
+                } catch (e) {
+                    // 备份也失败了
+                }
+
                 // 尝试使用本地预设壁纸作为备选
                 return this.presetWallpapers.slice(0, count).map((wp, index) => ({
                     url: wp.url,
@@ -996,42 +1012,36 @@ class WallpaperManager {
             return data.images.map(({ url, title, copyright, startdate, hsh, urlbase }, index) => {
                 let fullUrl;
 
-                // 优先使用 urlbase（如果存在）
-                if (urlbase) {
-                    // urlbase 是完整的图片 URL，不包含尺寸参数
-                    // 我们添加尺寸参数
-                    const separator = urlbase.includes('?') ? '&' : '?';
-                    fullUrl = `${urlbase}${separator}w=1920&h=1080&q=80`;
-                } else {
-                    // 构造完整URL
-                    fullUrl = url.startsWith('http') ? url : `https://www.bing.com${url}`;
-
-                    // 移除 rf 参数以避免必应返回回退图片
-                    fullUrl = fullUrl.replace(/&?rf=[^&]+/g, '');
-                    fullUrl = fullUrl.replace(/\?rf=[^&]+&/, '?');
-                    fullUrl = fullUrl.replace(/\?rf=[^&]+$/, '');
-
-                    // 确保URL包含正确的参数
+                // 优先使用 Bing 提供的完整 url 字段，但要补全域名
+                if (url) {
+                    fullUrl = url.startsWith('http') ? url : `${successfulHost}${url}`;
+                    
+                    // 确保 URL 包含必要的参数以获取高质量图片
                     try {
                         const urlObj = new URL(fullUrl);
-
+                        // 移除 rf 参数，有时它会导致加载回退图片
+                        urlObj.searchParams.delete('rf');
+                        
+                        if (!urlObj.searchParams.has('pid')) {
+                            urlObj.searchParams.set('pid', 'hp');
+                        }
+                        // 如果没有 w/h 参数，设置默认值
                         if (!urlObj.searchParams.has('w')) {
                             urlObj.searchParams.set('w', '1920');
                         }
                         if (!urlObj.searchParams.has('h')) {
                             urlObj.searchParams.set('h', '1080');
                         }
-                        if (!urlObj.searchParams.has('q')) {
-                            urlObj.searchParams.set('q', '80');
-                        }
-
-                        // 添加随机参数防止浏览器缓存相同的图片
-                        urlObj.searchParams.set('random', Math.random().toString(36).substring(7));
-
                         fullUrl = urlObj.toString();
-                    } catch (urlError) {
-                        // Invalid URL, using original
+                    } catch (e) {
+                        // URL 解析失败，保持原样
                     }
+                } else if (urlbase) {
+                    // 如果没有 url 只有 urlbase，则手动构造
+                    fullUrl = `${successfulHost}${urlbase}_1920x1080.jpg&pid=hp`;
+                } else {
+                    // 最后的回退
+                    fullUrl = this.presetWallpapers[index % this.presetWallpapers.length].url;
                 }
 
                 return {
@@ -1062,6 +1072,12 @@ class WallpaperManager {
         if (!container) return;
 
         container.innerHTML = '';
+        
+        if (!this.bingWallpapers || this.bingWallpapers.length === 0) {
+            container.innerHTML = `<div style="grid-column: span 2; text-align: center; padding: 20px; color: #64748b;">${api.i18n.getMessage('noWallpapers') || '无法加载壁纸'}</div>`;
+            return;
+        }
+
         const fragment = document.createDocumentFragment();
         this.bingWallpapers.forEach((wallpaper) => {
             fragment.appendChild(this.createBingWallpaperElement(wallpaper))
@@ -1076,13 +1092,65 @@ class WallpaperManager {
         element.className = 'bing-wallpaper-item';
         element.setAttribute('data-wallpaper-url', url);
         element.title = title;
-        element.innerHTML = `
-            <div class="bing-wallpaper-thumbnail" style="background-image: url('${url}')"></div>
-            <div class="bing-wallpaper-info">
-                <div class="bing-wallpaper-title">${title}</div>
-                <div class="bing-wallpaper-date">${this.formatDate(date)}</div>
-            </div>
+
+        // 壁纸缩略图：直接设置背景图片
+        const thumbnailDiv = document.createElement('div');
+        thumbnailDiv.className = 'bing-wallpaper-thumbnail';
+        thumbnailDiv.style.backgroundImage = `url('${url}')`;
+        thumbnailDiv.style.backgroundColor = '#334155';
+        thumbnailDiv.style.backgroundSize = 'cover';
+        thumbnailDiv.style.backgroundPosition = 'center';
+        thumbnailDiv.style.display = 'flex';
+        thumbnailDiv.style.alignItems = 'center';
+        thumbnailDiv.style.justifyContent = 'center';
+
+        // 使用 Image 预加载检测失败情况，尝试切换 Host
+        const imgTest = new Image();
+        let retryCount = 0;
+        imgTest.onerror = () => {
+            if (retryCount === 0) {
+                retryCount++;
+                // 如果 cn.bing.com 失败，尝试切换到 www.bing.com
+                if (url.includes('cn.bing.com')) {
+                    const altUrl = url.replace('cn.bing.com', 'www.bing.com');
+                    thumbnailDiv.style.backgroundImage = `url('${altUrl}')`;
+                    element.setAttribute('data-wallpaper-url', altUrl);
+                    imgTest.src = altUrl;
+                    return;
+                } else if (url.includes('www.bing.com')) {
+                    // 如果 www.bing.com 失败，尝试切换到 cn.bing.com
+                    const altUrl = url.replace('www.bing.com', 'cn.bing.com');
+                    thumbnailDiv.style.backgroundImage = `url('${altUrl}')`;
+                    element.setAttribute('data-wallpaper-url', altUrl);
+                    imgTest.src = altUrl;
+                    return;
+                }
+            }
+            
+            // 如果所有重试都失败
+            thumbnailDiv.style.backgroundImage = 'none';
+            thumbnailDiv.style.background = 'linear-gradient(135deg, #334155, #475569)';
+            
+            // 添加提示文字
+            const errorText = document.createElement('span');
+            errorText.style.color = '#fff';
+            errorText.style.fontSize = '12px';
+            errorText.style.textAlign = 'center';
+            errorText.style.padding = '10px';
+            errorText.textContent = api.i18n.getMessage('imageLoadError') || '加载失败';
+            thumbnailDiv.appendChild(errorText);
+        };
+        imgTest.src = url;
+
+        element.appendChild(thumbnailDiv);
+
+        const info = document.createElement('div');
+        info.className = 'bing-wallpaper-info';
+        info.innerHTML = `
+            <div class="bing-wallpaper-title">${title}</div>
+            <div class="bing-wallpaper-date">${this.formatDate(date)}</div>
         `;
+        element.appendChild(info);
 
         // 修改点击事件，使用 handleWallpaperOptionClick
         element.addEventListener('click', () => {

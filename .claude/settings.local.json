@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls src/_locales/)",
+      "Bash(ls _locales/)"
+    ]
+  }
+}
