@@ -55,19 +55,18 @@ function setFaviconWithFallback(img, pageUrl, size = 32) {
   const candidates = getFaviconCandidates(pageUrl, size);
   let index = 0;
   const LOAD_TIMEOUT_MS = 2200;
-  let timeoutId = null;
 
   const tryNext = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
+    if (img._faviconTimer) {
+      clearTimeout(img._faviconTimer);
+      img._faviconTimer = null;
     }
     if (index >= candidates.length) {
-      img.src = '';
+      // 所有候选源均失败，保留当前显示的图像（不清空 src）
       return;
     }
     const current = candidates[index++];
-    timeoutId = setTimeout(() => {
+    img._faviconTimer = setTimeout(() => {
       tryNext();
     }, LOAD_TIMEOUT_MS);
     img.src = current;
@@ -78,9 +77,9 @@ function setFaviconWithFallback(img, pageUrl, size = 32) {
   };
 
   img.onload = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
+    if (img._faviconTimer) {
+      clearTimeout(img._faviconTimer);
+      img._faviconTimer = null;
     }
   };
 

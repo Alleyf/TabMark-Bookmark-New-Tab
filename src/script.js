@@ -2018,27 +2018,27 @@ function createBookmarkCard(bookmark, index) {
   img.className = 'w-6 h-6 mr-2';
   // 统一favicon加载策略
   if (!isFirefox) {
-    // Chrome: 优先使用内置 _favicon API（浏览器缓存，最快最可靠）
+    // Chrome: 使用内置 _favicon API，始终返回有效图像（无外部降级）
     img.src = `chrome-extension://${api.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bookmark.url)}&size=32`;
-    img.onerror = function () {
-      // _favicon API 失败，回退到外部服务（不再直接访问目标域名的 favicon.ico）
-      if (typeof window.setFaviconWithFallback === 'function') {
-        window.setFaviconWithFallback(img, bookmark.url, 32);
-      }
-    };
   } else if (typeof window.setFaviconWithFallback === 'function') {
-    // Firefox: 直接使用外部服务候选回退（Firefox 无内置 _favicon API）
+    // Firefox: 使用外部服务候选回退（Firefox 无内置 _favicon API）
     window.setFaviconWithFallback(img, bookmark.url, 32);
   }
 
   // 尝试从缓存获取颜色
   const cachedColors = localStorage.getItem(`bookmark-colors-${bookmark.id}`);
-  
+
+  // 清除 setFaviconWithFallback 的定时器（避免 onload 被覆盖后回退链继续）
+  if (img._faviconTimer) {
+    clearTimeout(img._faviconTimer);
+    img._faviconTimer = null;
+  }
+
   if (cachedColors) {
     // 如果有缓存，直接应用缓存的颜色
     const colors = JSON.parse(cachedColors);
     applyColors(card, colors);
-    
+
     // 只加载 favicon 图片，不重新计算颜色
     img.onload = null;
   } else {
